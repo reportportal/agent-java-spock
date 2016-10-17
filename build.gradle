@@ -1,0 +1,23 @@
+group 'com.epam.reportportal'
+
+apply plugin: 'java'
+apply from: 'quality.gradle'
+
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
+description = 'Spock client'
+repositories {
+  jcenter()
+  maven { url "http://dl.bintray.com/epam/reportportal" }
+}
+
+dependencies {
+  compile 'com.epam.reportportal:client-java-core:2.5.1'
+  compileOnly 'org.spockframework:spock-core:1.0-groovy-2.0'
+}
+
+task wrapper(type: Wrapper) {
+  gradleVersion = '3.0'
+}
+
