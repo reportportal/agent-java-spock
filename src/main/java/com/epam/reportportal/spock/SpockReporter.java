@@ -1,12 +1,33 @@
+/*
+ * Copyright 2016 EPAM Systems
+ *
+ *
+ * This file is part of EPAM Report Portal.
+ * https://github.com/reportportal/agent-java-spock
+ *
+ * Report Portal is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Report Portal is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Report Portal.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package com.epam.reportportal.spock;
 
+import static com.epam.reportportal.listeners.Statuses.*;
+import static com.epam.reportportal.spock.ReportableItemFootprint.IS_PUBLISHED_CONDITION;
 import static com.google.common.collect.Iterables.filter;
 
 import java.util.Calendar;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import org.slf4j.Logger;
@@ -17,7 +38,6 @@ import org.spockframework.util.ExceptionUtil;
 import com.epam.reportportal.listeners.ListenerParameters;
 import com.epam.reportportal.listeners.ListenersUtils;
 import com.epam.reportportal.listeners.ReportPortalListenerContext;
-import com.epam.reportportal.listeners.Statuses;
 import com.epam.reportportal.restclient.endpoint.exception.RestEndpointIOException;
 import com.epam.reportportal.service.IReportPortalService;
 import com.epam.ta.reportportal.ws.model.EntryCreatedRS;
@@ -27,7 +47,6 @@ import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import com.epam.ta.reportportal.ws.model.launch.Mode;
 import com.epam.ta.reportportal.ws.model.launch.StartLaunchRQ;
 import com.epam.ta.reportportal.ws.model.log.SaveLogRQ;
-import com.google.common.base.Predicate;
 
 /**
  * @author Dzmitry Mikhievich
@@ -74,10 +93,11 @@ class SpockReporter implements ISpockReporter {
 	@Override
 	public void registerSpec(SpecInfo spec) {
 		StartTestItemRQ rq = createBaseStartTestItemRQ(spec.getName(), "TEST");
+		rq.setStartTime(Calendar.getInstance().getTime());
 		rq.setDescription(spec.getNarrative());
 		try {
 			EntryCreatedRS rs = reportPortalService.startRootTestItem(rq);
-			launchContext.addRunningSpec(spec, rs.getId());
+			launchContext.addRunningSpec(rs.getId(), spec);
 			ReportPortalListenerContext.setRunningNowItemId(rs.getId());
 		} catch (Exception e) {
 			String message = "Unable start spec: '" + spec.getName() + "'";
@@ -93,11 +113,12 @@ class SpockReporter implements ISpockReporter {
 	@Override
 	public void registerIteration(IterationInfo iteration) {
 		StartTestItemRQ rq = createBaseStartTestItemRQ(iteration.getName(), "STEP");
+		rq.setDescription(NodeInfoUtils.getFeatureDescription(iteration.getFeature()));
 		ReportableItemFootprint spec = launchContext.findSpecFootprint(iteration.getFeature().getSpec());
 		String specId = spec != null ? spec.getId() : null;
 		try {
 			EntryCreatedRS rs = reportPortalService.startTestItem(specId, rq);
-			launchContext.addRunningIteration(iteration, rs.getId());
+			launchContext.addRunningIteration(rs.getId(), iteration);
 			ReportPortalListenerContext.setRunningNowItemId(rs.getId());
 		} catch (Exception e) {
 			String message = "Unable start test method: '" + iteration.getName() + "'";
@@ -111,7 +132,7 @@ class SpockReporter implements ISpockReporter {
 		registerIteration(maskedIteration);
 		// set skipped status in an appropriate footprint
 		ReportableItemFootprint footprint = launchContext.findIterationFootprint(maskedIteration);
-		footprint.setStatus(Statuses.SKIPPED);
+		footprint.setStatus(SKIPPED);
 		// publish result of masked iteration
 		publishIterationResult(maskedIteration);
 	}
@@ -119,7 +140,7 @@ class SpockReporter implements ISpockReporter {
 	@Override
 	public void trackSkippedSpec(SpecInfo spec) {
 		ReportableItemFootprint specFootprint = launchContext.findSpecFootprint(spec);
-		specFootprint.setStatus(Statuses.SKIPPED);
+		specFootprint.setStatus(SKIPPED);
 	}
 
 	@Override
@@ -127,10 +148,9 @@ class SpockReporter implements ISpockReporter {
 		ReportableItemFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
 		FinishTestItemRQ rq = new FinishTestItemRQ();
 		rq.setEndTime(Calendar.getInstance().getTime());
-		String status = specFootprint.getStatus();
-		rq.setStatus(status == null ? Statuses.PASSED : status);
+		rq.setStatus(specFootprint.getStatus().orNull());
 		try {
-			reportPortalService.finishTestItem(launchContext.getLaunchId(), rq);
+			reportPortalService.finishTestItem(specFootprint.getId(), rq);
 		} catch (RestEndpointIOException exception) {
 			String errorMessage = "Unable finish the launch: '" + launchContext.getLaunchId() + "'";
 			ListenersUtils.handleException(exception, LOGGER, errorMessage);
@@ -149,13 +169,7 @@ class SpockReporter implements ISpockReporter {
 	@Override
 	public void publishFeatureResult(FeatureInfo feature) {
 		List<? extends ReportableItemFootprint<IterationInfo>> iterations = launchContext.findIterationFootprints(feature);
-		Iterable<? extends ReportableItemFootprint<IterationInfo>> nonPublishedIterations = filter(iterations,
-				new Predicate<ReportableItemFootprint<IterationInfo>>() {
-					@Override
-					public boolean apply(@Nullable ReportableItemFootprint<IterationInfo> input) {
-						return input != null && !input.isPublished();
-					}
-				});
+		Iterable<? extends ReportableItemFootprint<IterationInfo>> nonPublishedIterations = filter(iterations, IS_PUBLISHED_CONDITION);
 		for (ReportableItemFootprint<IterationInfo> iterationFootprint : nonPublishedIterations) {
 			reportIterationResult(iterationFootprint);
 		}
@@ -172,7 +186,7 @@ class SpockReporter implements ISpockReporter {
 		case SETUP_SPEC:
 			SpecInfo specInfo = launchContext.getRuntimePointer().getCurrentSpec();
 			ReportableItemFootprint specFootprint = launchContext.findSpecFootprint(specInfo);
-			specFootprint.setStatus(Statuses.FAILED);
+			specFootprint.setStatus(FAILED);
 			reportTestItemFailure(specFootprint, error);
 			break;
 
@@ -182,7 +196,7 @@ class SpockReporter implements ISpockReporter {
 			IterationInfo maskedIteration = buildIterationMaskOfFeature(featureInfo);
 			registerIteration(maskedIteration);
 			ReportableItemFootprint maskedIterationFootprint = launchContext.findIterationFootprint(maskedIteration);
-			maskedIterationFootprint.setStatus(Statuses.FAILED);
+			maskedIterationFootprint.setStatus(FAILED);
 			reportTestItemFailure(maskedIterationFootprint, error);
 			break;
 
@@ -191,7 +205,7 @@ class SpockReporter implements ISpockReporter {
 		case CLEANUP:
 			IterationInfo iterationInfo = launchContext.getRuntimePointer().getCurrentIteration();
 			ReportableItemFootprint iterationFootprint = launchContext.findIterationFootprint(iterationInfo);
-			iterationFootprint.setStatus(Statuses.FAILED);
+			iterationFootprint.setStatus(FAILED);
 			reportTestItemFailure(iterationFootprint, error);
 			break;
 
@@ -206,8 +220,6 @@ class SpockReporter implements ISpockReporter {
 	public void finishLaunch() {
 		FinishExecutionRQ rq = new FinishExecutionRQ();
 		rq.setEndTime(Calendar.getInstance().getTime());
-		// TODO add status calculation logic
-		rq.setStatus(Statuses.PASSED);
 		try {
 			reportPortalService.finishLaunch(launchContext.getLaunchId(), rq);
 		} catch (RestEndpointIOException exception) {
@@ -219,8 +231,7 @@ class SpockReporter implements ISpockReporter {
 	private void reportIterationResult(ReportableItemFootprint<IterationInfo> footprint) {
 		FinishTestItemRQ rq = new FinishTestItemRQ();
 		rq.setEndTime(Calendar.getInstance().getTime());
-		String status = footprint.getStatus();
-		rq.setStatus(status == null ? Statuses.PASSED : status);
+		rq.setStatus(footprint.getStatus().or(PASSED));
 		try {
 			reportPortalService.finishTestItem(footprint.getId(), rq);
 		} catch (Exception e) {
