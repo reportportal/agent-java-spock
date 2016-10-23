@@ -33,6 +33,18 @@ abstract class AbstractLaunchContext {
 
 	private String launchId;
 
+	public String getLaunchId() {
+		return launchId;
+	}
+
+	public void setLaunchId(String launchId) {
+		this.launchId = launchId;
+	}
+
+	public boolean isSpecRegistered(SpecInfo specInfo) {
+		return findSpecFootprint(specInfo) != null;
+	}
+
 	public abstract void addRunningSpec(String id, SpecInfo specInfo);
 
 	public abstract void addRunningFeature(FeatureInfo featureInfo);
@@ -46,14 +58,6 @@ abstract class AbstractLaunchContext {
 	public abstract ReportableItemFootprint<SpecInfo> findSpecFootprint(SpecInfo specInfo);
 
 	public abstract IRuntimePointer getRuntimePointer();
-
-	public String getLaunchId() {
-		return launchId;
-	}
-
-	public void setLaunchId(String launchId) {
-		this.launchId = launchId;
-	}
 
 	public interface IRuntimePointer {
 

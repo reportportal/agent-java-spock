@@ -34,6 +34,8 @@ import org.spockframework.runtime.model.FeatureInfo;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import org.spockframework.runtime.model.SpecInfo;
+import spock.lang.Narrative;
 
 /**
  * Created by Dzmitry_Mikhievich
@@ -63,7 +65,7 @@ public class NodeInfoUtils {
 	private NodeInfoUtils() {
 	}
 
-	static String getFeatureDescription(FeatureInfo featureInfo) {
+	static String buildFeatureDescription(FeatureInfo featureInfo) {
 		StringBuilder description = new StringBuilder();
 		Iterator<BlockInfo> blocksIterator = featureInfo.getBlocks().iterator();
 		while (blocksIterator.hasNext()) {
@@ -78,6 +80,12 @@ public class NodeInfoUtils {
 			}
 		}
 		return description.toString();
+	}
+
+	@Nullable
+	static String retrieveSpecNarrative(SpecInfo specInfo) {
+		Narrative narrative = specInfo.getAnnotation(Narrative.class);
+		return narrative != null ? narrative.value() : null;
 	}
 
 	private static String formatBlockKind(BlockKind blockKind) {

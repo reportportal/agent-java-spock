@@ -23,6 +23,7 @@ package com.epam.reportportal.spock;
 import static com.epam.reportportal.listeners.Statuses.*;
 import static com.epam.reportportal.spock.ReportableItemFootprint.IS_PUBLISHED_CONDITION;
 import static com.google.common.collect.Iterables.filter;
+import static com.google.common.collect.Iterables.getFirst;
 
 import java.util.Calendar;
 import java.util.List;
@@ -92,9 +93,12 @@ class SpockReporter implements ISpockReporter {
 
 	@Override
 	public void registerSpec(SpecInfo spec) {
+		if(launchContext.isSpecRegistered(spec)) {
+			return;
+		}
 		StartTestItemRQ rq = createBaseStartTestItemRQ(spec.getName(), "TEST");
 		rq.setStartTime(Calendar.getInstance().getTime());
-		rq.setDescription(spec.getNarrative());
+		rq.setDescription(NodeInfoUtils.retrieveSpecNarrative(spec));
 		try {
 			EntryCreatedRS rs = reportPortalService.startRootTestItem(rq);
 			launchContext.addRunningSpec(rs.getId(), spec);
@@ -106,35 +110,30 @@ class SpockReporter implements ISpockReporter {
 	}
 
 	@Override
-	public void registerFeature(FeatureInfo featureInfo) {
-		launchContext.addRunningFeature(featureInfo);
+	public void registerFeature(FeatureInfo feature) {
+		launchContext.addRunningFeature(feature);
+		if (isNotUnrolledParametrizedFeature(feature) && !feature.isSkipped()) {
+			IterationInfo maskedIteration = buildIterationMaskForFeature(feature);
+			reportIterationStart(maskedIteration);
+		}
 	}
 
 	@Override
 	public void registerIteration(IterationInfo iteration) {
-		StartTestItemRQ rq = createBaseStartTestItemRQ(iteration.getName(), "STEP");
-		rq.setDescription(NodeInfoUtils.getFeatureDescription(iteration.getFeature()));
-		ReportableItemFootprint spec = launchContext.findSpecFootprint(iteration.getFeature().getSpec());
-		String specId = spec != null ? spec.getId() : null;
-		try {
-			EntryCreatedRS rs = reportPortalService.startTestItem(specId, rq);
-			launchContext.addRunningIteration(rs.getId(), iteration);
-			ReportPortalListenerContext.setRunningNowItemId(rs.getId());
-		} catch (Exception e) {
-			String message = "Unable start test method: '" + iteration.getName() + "'";
-			ListenersUtils.handleException(e, LOGGER, message);
+		if (!isNotUnrolledParametrizedFeature(iteration.getFeature())) {
+			reportIterationStart(iteration);
 		}
 	}
 
 	@Override
 	public void trackSkippedFeature(FeatureInfo featureInfo) {
-		IterationInfo maskedIteration = buildIterationMaskOfFeature(featureInfo);
-		registerIteration(maskedIteration);
+		IterationInfo maskedIteration = buildIterationMaskForFeature(featureInfo);
+		reportIterationStart(maskedIteration);
 		// set skipped status in an appropriate footprint
-		ReportableItemFootprint footprint = launchContext.findIterationFootprint(maskedIteration);
+		ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(maskedIteration);
 		footprint.setStatus(SKIPPED);
-		// publish result of masked iteration
-		publishIterationResult(maskedIteration);
+		// report result of masked iteration
+		reportIterationResult(footprint);
 	}
 
 	@Override
@@ -161,17 +160,26 @@ class SpockReporter implements ISpockReporter {
 
 	@Override
 	public void publishIterationResult(IterationInfo iteration) {
-		ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(iteration);
-		ReportPortalListenerContext.setRunningNowItemId(null);
-		reportIterationResult(footprint);
+		FeatureInfo feature = iteration.getFeature();
+		if (!isNotUnrolledParametrizedFeature(feature)) {
+			ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(iteration);
+			ReportPortalListenerContext.setRunningNowItemId(null);
+			reportIterationResult(footprint);
+		}
 	}
 
 	@Override
 	public void publishFeatureResult(FeatureInfo feature) {
-		List<? extends ReportableItemFootprint<IterationInfo>> iterations = launchContext.findIterationFootprints(feature);
-		Iterable<? extends ReportableItemFootprint<IterationInfo>> nonPublishedIterations = filter(iterations, IS_PUBLISHED_CONDITION);
-		for (ReportableItemFootprint<IterationInfo> iterationFootprint : nonPublishedIterations) {
-			reportIterationResult(iterationFootprint);
+		if (isNotUnrolledParametrizedFeature(feature)) {
+			ReportableItemFootprint<IterationInfo> footprint = getFirst(launchContext.findIterationFootprints(feature), null);
+			ReportPortalListenerContext.setRunningNowItemId(null);
+			reportIterationResult(footprint);
+		} else {
+			List<? extends ReportableItemFootprint<IterationInfo>> iterations = launchContext.findIterationFootprints(feature);
+			Iterable<? extends ReportableItemFootprint<IterationInfo>> nonPublishedIterations = filter(iterations, IS_PUBLISHED_CONDITION);
+			for (ReportableItemFootprint<IterationInfo> iterationFootprint : nonPublishedIterations) {
+				reportIterationResult(iterationFootprint);
+			}
 		}
 	}
 
@@ -193,7 +201,7 @@ class SpockReporter implements ISpockReporter {
 		case DATA_PROCESSOR:
 		case INITIALIZER:
 			FeatureInfo featureInfo = launchContext.getRuntimePointer().getCurrentFeature();
-			IterationInfo maskedIteration = buildIterationMaskOfFeature(featureInfo);
+			IterationInfo maskedIteration = buildIterationMaskForFeature(featureInfo);
 			registerIteration(maskedIteration);
 			ReportableItemFootprint maskedIterationFootprint = launchContext.findIterationFootprint(maskedIteration);
 			maskedIterationFootprint.setStatus(FAILED);
@@ -228,6 +236,22 @@ class SpockReporter implements ISpockReporter {
 		}
 	}
 
+	private void reportIterationStart(IterationInfo iteration) {
+		FeatureInfo feature = iteration.getFeature();
+		StartTestItemRQ rq = createBaseStartTestItemRQ(iteration.getName(), "STEP");
+		rq.setDescription(NodeInfoUtils.buildFeatureDescription(feature));
+		ReportableItemFootprint spec = launchContext.findSpecFootprint(feature.getSpec());
+		String specId = spec != null ? spec.getId() : null;
+		try {
+			EntryCreatedRS rs = reportPortalService.startTestItem(specId, rq);
+			launchContext.addRunningIteration(rs.getId(), iteration);
+			ReportPortalListenerContext.setRunningNowItemId(rs.getId());
+		} catch (Exception e) {
+			String message = "Unable start test method: '" + iteration.getName() + "'";
+			ListenersUtils.handleException(e, LOGGER, message);
+		}
+	}
+
 	private void reportIterationResult(ReportableItemFootprint<IterationInfo> footprint) {
 		FinishTestItemRQ rq = new FinishTestItemRQ();
 		rq.setEndTime(Calendar.getInstance().getTime());
@@ -255,7 +279,7 @@ class SpockReporter implements ISpockReporter {
 		}
 	}
 
-	private IterationInfo buildIterationMaskOfFeature(FeatureInfo featureInfo) {
+	private IterationInfo buildIterationMaskForFeature(FeatureInfo featureInfo) {
 		IterationInfo iterationInfo = new IterationInfo(featureInfo, null, 0);
 		iterationInfo.setName(featureInfo.getName());
 		return iterationInfo;
@@ -268,5 +292,9 @@ class SpockReporter implements ISpockReporter {
 		rq.setType(type);
 		rq.setLaunchId(launchContext.getLaunchId());
 		return rq;
+	}
+
+	private static boolean isNotUnrolledParametrizedFeature(FeatureInfo feature) {
+		return feature.isParameterized() && !feature.isReportIterations();
 	}
 }
