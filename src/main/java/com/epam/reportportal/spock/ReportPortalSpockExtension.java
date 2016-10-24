@@ -21,6 +21,8 @@
 package com.epam.reportportal.spock;
 
 import org.spockframework.runtime.extension.IGlobalExtension;
+import org.spockframework.runtime.extension.IMethodInterceptor;
+import org.spockframework.runtime.model.MethodInfo;
 import org.spockframework.runtime.model.SpecInfo;
 
 import com.epam.reportportal.guice.Injector;
@@ -33,6 +35,7 @@ public class ReportPortalSpockExtension implements IGlobalExtension {
 	private static Injector injector = Injector.getInstance().getChildInjector(new SpockListenersModule());
 
 	private ISpockReporter spockReporter = injector.getBean(ISpockReporter.class);
+	private IMethodInterceptor fixturesInterceptor = injector.getBean(IMethodInterceptor.class);
 
 	@Override
 	public void start() {
@@ -46,9 +49,13 @@ public class ReportPortalSpockExtension implements IGlobalExtension {
 		 * SHARED_INITIALIZER beforeSpec(...) on the listener isn't called
 		 */
 		spockReporter.registerSpec(spec);
+		for (MethodInfo fixture : spec.getAllFixtureMethods()) {
+			fixture.addInterceptor(fixturesInterceptor);
+		}
 		spec.addListener(new ReportableRunListener(spockReporter));
 	}
 
+	@Override
 	public void stop() {
 		spockReporter.finishLaunch();
 	}

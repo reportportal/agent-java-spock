@@ -20,10 +20,7 @@
  */
 package com.epam.reportportal.spock;
 
-import org.spockframework.runtime.model.ErrorInfo;
-import org.spockframework.runtime.model.FeatureInfo;
-import org.spockframework.runtime.model.IterationInfo;
-import org.spockframework.runtime.model.SpecInfo;
+import org.spockframework.runtime.model.*;
 
 /**
  * @author Dzmitry Mikhievich
@@ -31,6 +28,8 @@ import org.spockframework.runtime.model.SpecInfo;
 interface ISpockReporter {
 
 	void startLaunch();
+
+	void registerFixture(MethodInfo fixture);
 
 	void registerSpec(SpecInfo spec);
 
@@ -41,6 +40,8 @@ interface ISpockReporter {
 	void trackSkippedFeature(FeatureInfo featureInfo);
 
 	void trackSkippedSpec(SpecInfo spec);
+
+	void publishFixtureResult(MethodInfo fixture);
 
 	void publishIterationResult(IterationInfo iteration);
 

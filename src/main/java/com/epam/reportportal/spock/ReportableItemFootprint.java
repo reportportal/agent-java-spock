@@ -22,10 +22,9 @@ package com.epam.reportportal.spock;
 
 import javax.annotation.Nullable;
 
-import org.spockframework.runtime.model.NodeInfo;
-
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
+import org.spockframework.runtime.model.NodeInfo;
 
 /**
  * @author Dzmitry Mikhievich
@@ -39,18 +38,18 @@ abstract class ReportableItemFootprint<T extends NodeInfo> {
 		}
 	};
 
-	private final T nodeInfo;
 	private final String id;
 	private String status;
 	private boolean published = false;
+	private final T item;
 
-	protected ReportableItemFootprint(T nodeInfo, String id) {
-		this.nodeInfo = nodeInfo;
+	protected ReportableItemFootprint(T item, String id) {
 		this.id = id;
+		this.item = item;
 	}
 
-	public T getNodeInfo() {
-		return nodeInfo;
+	public T getItem() {
+		return item;
 	}
 
 	public String getId() {
@@ -72,4 +71,10 @@ abstract class ReportableItemFootprint<T extends NodeInfo> {
 	public boolean isPublished() {
 		return published;
 	}
+
+	public String getItemName() {
+		return getItem().getName();
+	}
+
+	public abstract boolean hasDescendants();
 }

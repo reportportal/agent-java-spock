@@ -21,20 +21,19 @@
 package com.epam.reportportal.spock;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.base.Strings.nullToEmpty;
 import static org.spockframework.runtime.model.BlockKind.WHERE;
 
 import java.util.Iterator;
 
 import javax.annotation.Nullable;
 
-import org.spockframework.runtime.model.BlockInfo;
-import org.spockframework.runtime.model.BlockKind;
-import org.spockframework.runtime.model.FeatureInfo;
+import org.spockframework.runtime.model.*;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import org.spockframework.runtime.model.SpecInfo;
+
 import spock.lang.Narrative;
 
 /**
@@ -42,6 +41,7 @@ import spock.lang.Narrative;
  */
 public class NodeInfoUtils {
 
+	private static final String IDENTIFIER_SEPARATOR = ".";
 	private static final String SPACE = " ";
 
 	private static final Predicate<BlockInfo> SKIP_BLOCK_CONDITION = new Predicate<BlockInfo>() {
@@ -86,6 +86,23 @@ public class NodeInfoUtils {
 	static String retrieveSpecNarrative(SpecInfo specInfo) {
 		Narrative narrative = specInfo.getAnnotation(Narrative.class);
 		return narrative != null ? narrative.value() : null;
+	}
+
+	static String getMethodIdentifier(MethodInfo method) {
+		StringBuilder buffer = new StringBuilder(getSpecIdentifier(method.getParent()));
+		FeatureInfo featureInfo = method.getFeature();
+		if(featureInfo != null) {
+			buffer.append(IDENTIFIER_SEPARATOR).append(featureInfo.getName());
+		}
+		return buffer.append(IDENTIFIER_SEPARATOR).append(method.getName()).toString();
+	}
+
+	//TODO optimize
+	static String getSpecIdentifier(SpecInfo spec) {
+		if(spec != null) {
+			return nullToEmpty(spec.getPackage()) + IDENTIFIER_SEPARATOR + spec.getFilename();
+		}
+		return "";
 	}
 
 	private static String formatBlockKind(BlockKind blockKind) {

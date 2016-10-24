@@ -20,8 +20,6 @@
  */
 package com.epam.reportportal.spock;
 
-import static com.google.common.base.Strings.nullToEmpty;
-
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,14 +44,10 @@ import com.google.common.collect.Lists;
 class DefaultLaunchContext extends AbstractLaunchContext {
 
 	private static final Function<SpecInfo, String> SPEC_ID_EXTRACTOR = new Function<SpecInfo, String>() {
-		// TODO refactor
 		@Nullable
 		@Override
 		public String apply(@Nullable SpecInfo spec) {
-			if (spec != null) {
-				return nullToEmpty(spec.getPackage()) + "." + spec.getFilename();
-			}
-			return "";
+			return NodeInfoUtils.getSpecIdentifier(spec);
 		}
 	};
 
@@ -89,7 +83,7 @@ class DefaultLaunchContext extends AbstractLaunchContext {
 	}
 
 	@Override
-	public ReportableItemFootprint<IterationInfo> findIterationFootprint(IterationInfo iterationInfo) {
+	public NodeFootprint<IterationInfo> findIterationFootprint(IterationInfo iterationInfo) {
 		Specification specification = findSpecFootprint(iterationInfo.getFeature().getSpec());
 		if (specification != null) {
 			Feature feature = specification.getFeature(iterationInfo.getFeature());
@@ -101,7 +95,7 @@ class DefaultLaunchContext extends AbstractLaunchContext {
 	}
 
 	@Override
-	public List<? extends ReportableItemFootprint<IterationInfo>> findIterationFootprints(FeatureInfo featureInfo) {
+	public Iterable<Iteration> findIterationFootprints(FeatureInfo featureInfo) {
 		Specification specification = findSpecFootprint(featureInfo.getSpec());
 		if (specification != null) {
 			return specification.getFeature(featureInfo).getAllTrackedIteration();
@@ -121,16 +115,31 @@ class DefaultLaunchContext extends AbstractLaunchContext {
 	}
 
 	@Override
+	public Iterable<Specification> findAllUnpublishedSpecFootprints() {
+		return Iterables.filter(specsRegistry.values(), new Predicate<Specification>() {
+			@Override
+			public boolean apply(@Nullable Specification spec) {
+				return spec != null && !spec.isPublished();
+			}
+		});
+	}
+
+	@Override
 	public IRuntimePointer getRuntimePointer() {
 		return pointer;
 	}
 
-	private static class Specification extends ReportableItemFootprint<SpecInfo> {
+	private static class Specification extends NodeFootprint<SpecInfo> {
 
 		private List<Feature> features;
 
 		Specification(SpecInfo nodeInfo, String id) {
 			super(nodeInfo, id);
+		}
+
+		@Override
+		public boolean hasDescendants() {
+			return true;
 		}
 
 		public void addRunningFeature(FeatureInfo featureInfo) {
@@ -175,7 +184,7 @@ class DefaultLaunchContext extends AbstractLaunchContext {
 			return Iterables.find(getAllTrackedIteration(), new Predicate<Iteration>() {
 				@Override
 				public boolean apply(Iteration input) {
-					return input != null && iterationInfo.equals(input.getNodeInfo());
+					return input != null && iterationInfo.equals(input.getItem());
 				}
 			});
 		}
@@ -185,10 +194,15 @@ class DefaultLaunchContext extends AbstractLaunchContext {
 		}
 	}
 
-	private static class Iteration extends ReportableItemFootprint<IterationInfo> {
+	private static class Iteration extends NodeFootprint<IterationInfo> {
 
 		Iteration(IterationInfo nodeInfo, String id) {
 			super(nodeInfo, id);
+		}
+
+		@Override
+		public boolean hasDescendants() {
+			return false;
 		}
 	}
 

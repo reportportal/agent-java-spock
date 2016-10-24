@@ -51,11 +51,13 @@ abstract class AbstractLaunchContext {
 
 	public abstract void addRunningIteration(String id, IterationInfo iterationInfo);
 
-	public abstract ReportableItemFootprint<IterationInfo> findIterationFootprint(IterationInfo iterationInfo);
+	public abstract NodeFootprint<IterationInfo> findIterationFootprint(IterationInfo iterationInfo);
 
-	public abstract List<? extends ReportableItemFootprint<IterationInfo>> findIterationFootprints(FeatureInfo featureInfo);
+	public abstract Iterable<? extends NodeFootprint<IterationInfo>> findIterationFootprints(FeatureInfo featureInfo);
 
-	public abstract ReportableItemFootprint<SpecInfo> findSpecFootprint(SpecInfo specInfo);
+	public abstract NodeFootprint<SpecInfo> findSpecFootprint(SpecInfo specInfo);
+
+	public abstract Iterable<? extends NodeFootprint<SpecInfo>> findAllUnpublishedSpecFootprints();
 
 	public abstract IRuntimePointer getRuntimePointer();
 

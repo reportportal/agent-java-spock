@@ -24,6 +24,7 @@ import javax.inject.Singleton;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import org.spockframework.runtime.extension.IMethodInterceptor;
 
 /**
  * @author Dzmitry Mikhievich
@@ -39,5 +40,11 @@ class SpockListenersModule extends AbstractModule {
 	@Singleton
 	private AbstractLaunchContext launchContext() {
 		return new DefaultLaunchContext();
+	}
+
+	@Provides
+	@Singleton
+	IMethodInterceptor fixturesInterceptor(ISpockReporter spockReporter) {
+		return new FixtureInterceptor(spockReporter);
 	}
 }
