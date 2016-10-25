@@ -132,7 +132,6 @@ class SpockReporter implements ISpockReporter {
 		try {
 			EntryCreatedRS rs = reportPortalService.startRootTestItem(rq);
 			launchContext.addRunningSpec(rs.getId(), spec);
-			ReportPortalListenerContext.setRunningNowItemId(rs.getId());
 		} catch (Exception e) {
 			String message = "Unable start spec: '" + spec.getName() + "'";
 			ListenersUtils.handleException(e, LOGGER, message);
@@ -219,7 +218,6 @@ class SpockReporter implements ISpockReporter {
 	public void reportError(ErrorInfo error) {
 
 		MethodInfo errorSource = error.getMethod();
-
 		switch (errorSource.getKind()) {
 
 		case SHARED_INITIALIZER:
@@ -312,7 +310,9 @@ class SpockReporter implements ISpockReporter {
 		rq.setStatus(calculateFootprintStatus(footprint));
 		try {
 			reportPortalService.finishTestItem(footprint.getId(), rq);
-			ReportPortalListenerContext.setRunningNowItemId(null);
+			if(!footprint.hasDescendants()) {
+				ReportPortalListenerContext.setRunningNowItemId(null);
+			}
 		} catch (Exception e) {
 			String message = "Unable finish " + footprint.getClass().getSimpleName() + ": '" + footprint.getItemName() + "'";
 			ListenersUtils.handleException(e, LOGGER, message);
