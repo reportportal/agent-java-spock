@@ -20,8 +20,6 @@
  */
 package com.epam.reportportal.spock;
 
-import java.util.List;
-
 import org.spockframework.runtime.model.FeatureInfo;
 import org.spockframework.runtime.model.IterationInfo;
 import org.spockframework.runtime.model.SpecInfo;

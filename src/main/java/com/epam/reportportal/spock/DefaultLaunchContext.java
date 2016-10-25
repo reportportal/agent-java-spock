@@ -165,7 +165,7 @@ class DefaultLaunchContext extends AbstractLaunchContext {
 
 	private static class Feature {
 
-		private FeatureInfo featureInfo;
+		private final FeatureInfo featureInfo;
 		private List<Iteration> iterations;
 
 		Feature(FeatureInfo featureInfo) {

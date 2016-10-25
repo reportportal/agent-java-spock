@@ -30,12 +30,12 @@ import com.epam.reportportal.guice.Injector;
 /**
  * @author Dzmitry Mikhievich
  */
-public class ReportPortalSpockExtension implements IGlobalExtension {
+class ReportPortalSpockExtension implements IGlobalExtension {
 
-	private static Injector injector = Injector.getInstance().getChildInjector(new SpockListenersModule());
+	private static final Injector injector = Injector.getInstance().getChildInjector(new SpockListenersModule());
 
-	private ISpockReporter spockReporter = injector.getBean(ISpockReporter.class);
-	private IMethodInterceptor fixturesInterceptor = injector.getBean(IMethodInterceptor.class);
+	private final ISpockReporter spockReporter = injector.getBean(ISpockReporter.class);
+	private final IMethodInterceptor fixturesInterceptor = injector.getBean(IMethodInterceptor.class);
 
 	@Override
 	public void start() {

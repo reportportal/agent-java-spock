@@ -38,7 +38,7 @@ import spock.lang.Narrative;
 /**
  * Created by Dzmitry_Mikhievich
  */
-public class NodeInfoUtils {
+class NodeInfoUtils {
 
 	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
 	private static final String IDENTIFIER_SEPARATOR = ".";
@@ -106,7 +106,7 @@ public class NodeInfoUtils {
 		return "";
 	}
 
-	private static StringBuilder appendBlockInfo(StringBuilder featureDescription, BlockInfo block) {
+	private static void appendBlockInfo(StringBuilder featureDescription, BlockInfo block) {
 		featureDescription.append(formatBlockKind(block.getKind())).append(SPACE);
 		Iterator<String> textsIterator = block.getTexts().iterator();
         //append heading block
@@ -120,7 +120,6 @@ public class NodeInfoUtils {
 					.append(SPACE)
 					.append(textsIterator.next());
 		}
-		return featureDescription;
 	}
 
 	//TODO optimize

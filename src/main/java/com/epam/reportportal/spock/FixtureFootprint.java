@@ -31,7 +31,7 @@ class FixtureFootprint extends ReportableItemFootprint<MethodInfo> {
 
 	private final String fullName;
 
-	protected FixtureFootprint(MethodInfo item, String id) {
+	FixtureFootprint(MethodInfo item, String id) {
 		super(item, id);
 		this.fullName = getMethodIdentifier(getItem());
 	}

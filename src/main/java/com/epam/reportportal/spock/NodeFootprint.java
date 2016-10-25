@@ -49,12 +49,12 @@ abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFootprint
 
 	private final List<FixtureFootprint> fixtures;
 
-	protected NodeFootprint(T nodeInfo, String id) {
+	NodeFootprint(T nodeInfo, String id) {
 		super(nodeInfo, id);
 		fixtures = newArrayListWithCapacity(APPROXIMATE_CAPACITY);
 	}
 
-	public List<FixtureFootprint> getFixtures() {
+	List<FixtureFootprint> getFixtures() {
 		return newArrayList(fixtures);
 	}
 

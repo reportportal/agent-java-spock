@@ -43,7 +43,7 @@ abstract class ReportableItemFootprint<T extends NodeInfo> {
 	private boolean published = false;
 	private final T item;
 
-	protected ReportableItemFootprint(T item, String id) {
+	ReportableItemFootprint(T item, String id) {
 		this.id = id;
 		this.item = item;
 	}
