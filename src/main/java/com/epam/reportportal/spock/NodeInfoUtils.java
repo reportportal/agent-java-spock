@@ -30,7 +30,6 @@ import javax.annotation.Nullable;
 
 import org.spockframework.runtime.model.*;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
@@ -41,8 +40,11 @@ import spock.lang.Narrative;
  */
 public class NodeInfoUtils {
 
+	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
 	private static final String IDENTIFIER_SEPARATOR = ".";
 	private static final String SPACE = " ";
+
+	private static final String CONJUNCTION_KEYWORD = "And";
 
 	private static final Predicate<BlockInfo> SKIP_BLOCK_CONDITION = new Predicate<BlockInfo>() {
 		@Override
@@ -71,11 +73,10 @@ public class NodeInfoUtils {
 		while (blocksIterator.hasNext()) {
 			BlockInfo block = blocksIterator.next();
 			if (!SKIP_BLOCK_CONDITION.apply(block)) {
-				description.append(formatBlockKind(block.getKind())).append(SPACE);
-				Joiner.on(SPACE).appendTo(description, block.getTexts());
-				boolean last = blocksIterator.hasNext();
-				if (last) {
-					description.append(System.lineSeparator());
+                appendBlockInfo(description, block);
+				boolean notLast = blocksIterator.hasNext();
+				if (notLast) {
+					description.append(LINE_SEPARATOR);
 				}
 			}
 		}
@@ -105,6 +106,24 @@ public class NodeInfoUtils {
 		return "";
 	}
 
+	private static StringBuilder appendBlockInfo(StringBuilder featureDescription, BlockInfo block) {
+		featureDescription.append(formatBlockKind(block.getKind())).append(SPACE);
+		Iterator<String> textsIterator = block.getTexts().iterator();
+        //append heading block
+		if(textsIterator.hasNext()) {
+			featureDescription.append(textsIterator.next());
+		}
+        //append conjunction blocks
+		while(textsIterator.hasNext()) {
+			featureDescription.append(LINE_SEPARATOR)
+					.append(CONJUNCTION_KEYWORD)
+					.append(SPACE)
+					.append(textsIterator.next());
+		}
+		return featureDescription;
+	}
+
+	//TODO optimize
 	private static String formatBlockKind(BlockKind blockKind) {
 		char[] initialChars = blockKind.name().toCharArray();
 		char[] buffer = new char[initialChars.length];
