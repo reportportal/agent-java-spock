@@ -45,7 +45,7 @@ class NodeInfoUtils {
 
 	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
 	private static final String IDENTIFIER_SEPARATOR = ".";
-	private static final String SPACE = " ";
+	private static final String BLOCK_SPLITTER = ": ";
 
 	private static final Map<BlockKind, String> BLOCK_NAMES = Maps.newEnumMap(BlockKind.class);
 
@@ -117,7 +117,7 @@ class NodeInfoUtils {
 	}
 
 	private static void appendBlockInfo(StringBuilder featureDescription, BlockInfo block) {
-		featureDescription.append(formatBlockKind(block.getKind())).append(SPACE);
+		featureDescription.append(formatBlockKind(block.getKind())).append(BLOCK_SPLITTER);
 		Iterator<String> textsIterator = block.getTexts().iterator();
         //append heading block
 		if(textsIterator.hasNext()) {
@@ -127,7 +127,7 @@ class NodeInfoUtils {
 		while(textsIterator.hasNext()) {
 			featureDescription.append(LINE_SEPARATOR)
 					.append(CONJUNCTION_KEYWORD)
-					.append(SPACE)
+					.append(BLOCK_SPLITTER)
 					.append(textsIterator.next());
 		}
 	}

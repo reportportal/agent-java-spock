@@ -102,7 +102,6 @@ class SpockReporter implements ISpockReporter {
 		}
 	}
 
-	// TODO add impl
 	@Override
 	public void registerFixture(MethodInfo fixture) {
 		MethodKind kind = fixture.getKind();
@@ -339,12 +338,11 @@ class SpockReporter implements ISpockReporter {
 		Optional<String> footprintStatus = footprint.getStatus();
 		if (footprintStatus.isPresent()) {
 			return footprintStatus.get();
-		} else if (footprint.hasDescendants()) {
-			// don't set status explicitly for footprints with descendants:
-			// delegate status calculation to RP
-			return null;
 		}
-		return Statuses.PASSED;
+		// don't set status explicitly for footprints with descendants:
+		// delegate status calculation to RP
+		return footprint.hasDescendants() ? null : Statuses.PASSED;
+
 	}
 
 	private IterationInfo buildIterationMaskForFeature(FeatureInfo featureInfo) {
