@@ -25,15 +25,18 @@ import static com.google.common.base.Strings.nullToEmpty;
 import static org.spockframework.runtime.model.BlockKind.WHERE;
 
 import java.util.Iterator;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.Maps;
 import org.spockframework.runtime.model.*;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 import spock.lang.Narrative;
+import spock.lang.Title;
 
 /**
  * Created by Dzmitry_Mikhievich
@@ -43,6 +46,8 @@ class NodeInfoUtils {
 	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
 	private static final String IDENTIFIER_SEPARATOR = ".";
 	private static final String SPACE = " ";
+
+	private static final Map<BlockKind, String> BLOCK_NAMES = Maps.newEnumMap(BlockKind.class);
 
 	private static final String CONJUNCTION_KEYWORD = "And";
 
@@ -89,6 +94,11 @@ class NodeInfoUtils {
 		return narrative != null ? narrative.value() : null;
 	}
 
+	static String retrieveSpecName(SpecInfo specInfo) {
+		Title title = specInfo.getAnnotation(Title.class);
+		return title != null ? title.value() : specInfo.getName();
+	}
+
 	static String getMethodIdentifier(MethodInfo method) {
 		StringBuilder buffer = new StringBuilder(getSpecIdentifier(method.getParent()));
 		FeatureInfo featureInfo = method.getFeature();
@@ -122,19 +132,24 @@ class NodeInfoUtils {
 		}
 	}
 
-	//TODO optimize
-	private static String formatBlockKind(BlockKind blockKind) {
-		char[] initialChars = blockKind.name().toCharArray();
-		char[] buffer = new char[initialChars.length];
-		buffer[0] = initialChars[0];
-		// iterate over characters excluding the first one
-		for (int i = 1; i < initialChars.length; i++) {
-			char ch = initialChars[i];
-			if (Character.isUpperCase(ch)) {
-				ch = Character.toLowerCase(ch);
+	static String formatBlockKind(BlockKind blockKind) {
+		if(BLOCK_NAMES.containsKey(blockKind)) {
+			return BLOCK_NAMES.get(blockKind);
+		} else {
+			char[] initialChars = blockKind.name().toCharArray();
+			char[] buffer = new char[initialChars.length];
+			buffer[0] = initialChars[0];
+			// iterate over characters excluding the first one
+			for (int i = 1; i < initialChars.length; i++) {
+				char ch = initialChars[i];
+				if (Character.isUpperCase(ch)) {
+					ch = Character.toLowerCase(ch);
+				}
+				buffer[i] = ch;
 			}
-			buffer[i] = ch;
+			String blockName = new String(buffer);
+			BLOCK_NAMES.put(blockKind, blockName);
+			return blockName;
 		}
-		return new String(buffer);
 	}
 }

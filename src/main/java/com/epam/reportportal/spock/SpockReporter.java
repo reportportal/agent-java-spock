@@ -23,6 +23,7 @@ package com.epam.reportportal.spock;
 import static com.epam.reportportal.listeners.Statuses.FAILED;
 import static com.epam.reportportal.listeners.Statuses.SKIPPED;
 import static com.epam.reportportal.spock.NodeInfoUtils.buildFeatureDescription;
+import static com.epam.reportportal.spock.NodeInfoUtils.retrieveSpecName;
 import static com.epam.reportportal.spock.ReportableItemFootprint.IS_PUBLISHED_CONDITION;
 import static com.google.common.collect.Iterables.filter;
 import static com.google.common.collect.Iterables.getFirst;
@@ -127,7 +128,7 @@ class SpockReporter implements ISpockReporter {
 		if (launchContext.isSpecRegistered(spec)) {
 			return;
 		}
-		StartTestItemRQ rq = createBaseStartTestItemRQ(spec.getName(), ITEM_TYPES_REGISTRY.get(SPEC_EXECUTION));
+		StartTestItemRQ rq = createBaseStartTestItemRQ(retrieveSpecName(spec), ITEM_TYPES_REGISTRY.get(SPEC_EXECUTION));
 		rq.setDescription(NodeInfoUtils.retrieveSpecNarrative(spec));
 		try {
 			EntryCreatedRS rs = reportPortalService.startRootTestItem(rq);
@@ -310,7 +311,7 @@ class SpockReporter implements ISpockReporter {
 		rq.setStatus(calculateFootprintStatus(footprint));
 		try {
 			reportPortalService.finishTestItem(footprint.getId(), rq);
-			if(!footprint.hasDescendants()) {
+			if (!footprint.hasDescendants()) {
 				ReportPortalListenerContext.setRunningNowItemId(null);
 			}
 		} catch (Exception e) {
