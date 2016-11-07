@@ -22,9 +22,11 @@ package com.epam.reportportal.spock;
 
 import javax.inject.Singleton;
 
+import org.spockframework.runtime.IRunListener;
+import org.spockframework.runtime.extension.IMethodInterceptor;
+
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import org.spockframework.runtime.extension.IMethodInterceptor;
 
 /**
  * @author Dzmitry Mikhievich
@@ -34,12 +36,13 @@ class SpockListenersModule extends AbstractModule {
 	@Override
 	protected void configure() {
 		bind(ISpockReporter.class).toProvider(SpockReporterProvider.class).asEagerSingleton();
+		bind(IRunListener.class).to(ReportableRunListener.class).asEagerSingleton();
 	}
 
 	@Provides
 	@Singleton
 	private AbstractLaunchContext launchContext() {
-		return new DefaultLaunchContext();
+		return new LaunchContextImpl();
 	}
 
 	@Provides

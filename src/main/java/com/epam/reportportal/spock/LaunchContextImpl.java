@@ -20,6 +20,8 @@
  */
 package com.epam.reportportal.spock;
 
+import static com.epam.reportportal.spock.NodeInfoUtils.getSpecIdentifier;
+
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,7 +32,6 @@ import org.spockframework.runtime.model.FeatureInfo;
 import org.spockframework.runtime.model.IterationInfo;
 import org.spockframework.runtime.model.SpecInfo;
 
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -41,15 +42,7 @@ import com.google.common.collect.Lists;
  * 
  * @author Dzmitry Mikhievich
  */
-class DefaultLaunchContext extends AbstractLaunchContext {
-
-	private static final Function<SpecInfo, String> SPEC_ID_EXTRACTOR = new Function<SpecInfo, String>() {
-		@Nullable
-		@Override
-		public String apply(@Nullable SpecInfo spec) {
-			return NodeInfoUtils.getSpecIdentifier(spec);
-		}
-	};
+class LaunchContextImpl extends AbstractLaunchContext {
 
 	private final RuntimePointer pointer = new RuntimePointer();
 	private final Map<String, Specification> specsRegistry = new ConcurrentHashMap<String, Specification>();
@@ -58,7 +51,7 @@ class DefaultLaunchContext extends AbstractLaunchContext {
 	public void addRunningSpec(String id, SpecInfo specInfo) {
 		Specification specification = new Specification(specInfo, id);
 		pointer.setSpecInfo(specInfo);
-		specsRegistry.put(SPEC_ID_EXTRACTOR.apply(specInfo), specification);
+		specsRegistry.put(getSpecIdentifier(specInfo), specification);
 	}
 
 	@Override
@@ -108,7 +101,7 @@ class DefaultLaunchContext extends AbstractLaunchContext {
 		Specification footprint = null;
 		SpecInfo specToFind = specInfo;
 		while (footprint == null && specToFind != null) {
-			footprint = specsRegistry.get(SPEC_ID_EXTRACTOR.apply(specToFind));
+			footprint = specsRegistry.get(getSpecIdentifier(specToFind));
 			specToFind = specToFind.getSubSpec();
 		}
 		return footprint;

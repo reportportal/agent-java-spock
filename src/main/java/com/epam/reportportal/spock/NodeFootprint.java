@@ -20,7 +20,6 @@
  */
 package com.epam.reportportal.spock;
 
-import static com.epam.reportportal.spock.NodeInfoUtils.getMethodIdentifier;
 import static com.google.common.collect.Iterables.find;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Lists.newArrayListWithCapacity;
@@ -45,7 +44,7 @@ abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFootprint
 	 * a some kind of "happy medium" between memory consumption and potential
 	 * performance drawback on arrays coping
 	 */
-	private static final int APPROXIMATE_CAPACITY = 3;
+	private static final int APPROXIMATE_CAPACITY = 4;
 
 	private final List<FixtureFootprint> fixtures;
 
@@ -58,17 +57,17 @@ abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFootprint
 		return newArrayList(fixtures);
 	}
 
-	public FixtureFootprint findFixtureFootprint(MethodInfo fixture, @Nullable final Boolean isPublished) {
-		final String fullName = getMethodIdentifier(fixture);
+	//TODO refactor
+	public FixtureFootprint findFixtureFootprint(final MethodInfo fixture, @Nullable final Boolean isPublished) {
 		return find(getFixtures(), new Predicate<FixtureFootprint>() {
 			@Override
 			public boolean apply(@Nullable FixtureFootprint footprint) {
 				if (footprint != null) {
-					boolean isNameEqual = fullName.equals(footprint.getFullName());
+					boolean areItemsEqual = fixture.equals(footprint.getItem());
 					if (isPublished != null) {
-						return isNameEqual && isPublished.equals(valueOf(footprint.isPublished()));
+						return areItemsEqual && isPublished.equals(valueOf(footprint.isPublished()));
 					}
-					return isNameEqual;
+					return areItemsEqual;
 				}
 				return false;
 			}

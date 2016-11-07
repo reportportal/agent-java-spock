@@ -20,11 +20,14 @@
  */
 package com.epam.reportportal.spock;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import javax.annotation.Nullable;
+
+import org.spockframework.runtime.model.NodeInfo;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
-import org.spockframework.runtime.model.NodeInfo;
 
 /**
  * @author Dzmitry Mikhievich
@@ -39,11 +42,14 @@ abstract class ReportableItemFootprint<T extends NodeInfo> {
 	};
 
 	private final String id;
-	private String status;
-	private boolean published = false;
 	private final T item;
 
+	private String status;
+	private boolean published = false;
+
 	ReportableItemFootprint(T item, String id) {
+		checkArgument(item != null, "Node info shouldn't be null");
+		checkArgument(id != null, "Test item id shouldn't be null");
 		this.id = id;
 		this.item = item;
 	}

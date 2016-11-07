@@ -21,10 +21,12 @@
 package com.epam.reportportal.spock;
 
 import org.spockframework.runtime.AbstractRunListener;
-import org.spockframework.runtime.model.ErrorInfo;
-import org.spockframework.runtime.model.FeatureInfo;
-import org.spockframework.runtime.model.IterationInfo;
-import org.spockframework.runtime.model.SpecInfo;
+import org.spockframework.runtime.extension.IMethodInterceptor;
+import org.spockframework.runtime.model.*;
+
+import javax.inject.Inject;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * @author Dzmitry Mikhievich
@@ -32,9 +34,21 @@ import org.spockframework.runtime.model.SpecInfo;
 class ReportableRunListener extends AbstractRunListener {
 
 	private final ISpockReporter spockReporter;
+	private final IMethodInterceptor fixturesInterceptor;
 
-	public ReportableRunListener(ISpockReporter spockReporter) {
+	@Inject
+	public ReportableRunListener(ISpockReporter spockReporter, IMethodInterceptor fixturesInterceptor) {
+		checkArgument(spockReporter != null, "Spock reporter shouldn't be null");
 		this.spockReporter = spockReporter;
+		this.fixturesInterceptor = fixturesInterceptor;
+	}
+
+	@Override
+	public void beforeSpec(SpecInfo spec) {
+		spockReporter.registerSpec(spec);
+		for (MethodInfo fixture : spec.getAllFixtureMethods()) {
+			fixture.addInterceptor(fixturesInterceptor);
+		}
 	}
 
 	@Override

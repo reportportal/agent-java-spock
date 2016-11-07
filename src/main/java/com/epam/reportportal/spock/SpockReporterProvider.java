@@ -30,6 +30,8 @@ import javax.inject.Provider;
 import com.epam.reportportal.listeners.ListenerParameters;
 import com.epam.reportportal.service.BatchedReportPortalService;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 /**
  * @author Dzmitry Mikhievich
  */
@@ -42,6 +44,10 @@ class SpockReporterProvider implements Provider<ISpockReporter> {
 	@Inject
 	public SpockReporterProvider(BatchedReportPortalService reportPortalService, ListenerParameters parameters,
 			AbstractLaunchContext launchContext) {
+		checkArgument(reportPortalService != null, "Report portal service shouldn't be null");
+		checkArgument(parameters != null, "Launch parameters shouldn't be null");
+		checkArgument(launchContext != null, "Launch context shouldn't be null");
+
 		this.reportPortalService = reportPortalService;
 		this.parameters = parameters;
 		this.launchContext = launchContext;

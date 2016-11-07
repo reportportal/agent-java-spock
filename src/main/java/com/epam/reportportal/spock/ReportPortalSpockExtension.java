@@ -20,9 +20,8 @@
  */
 package com.epam.reportportal.spock;
 
+import org.spockframework.runtime.IRunListener;
 import org.spockframework.runtime.extension.IGlobalExtension;
-import org.spockframework.runtime.extension.IMethodInterceptor;
-import org.spockframework.runtime.model.MethodInfo;
 import org.spockframework.runtime.model.SpecInfo;
 
 import com.epam.reportportal.guice.Injector;
@@ -30,12 +29,12 @@ import com.epam.reportportal.guice.Injector;
 /**
  * @author Dzmitry Mikhievich
  */
-class ReportPortalSpockExtension implements IGlobalExtension {
+public class ReportPortalSpockExtension implements IGlobalExtension {
 
 	private static final Injector injector = Injector.getInstance().getChildInjector(new SpockListenersModule());
 
 	private final ISpockReporter spockReporter = injector.getBean(ISpockReporter.class);
-	private final IMethodInterceptor fixturesInterceptor = injector.getBean(IMethodInterceptor.class);
+	private final IRunListener reportingRunListener = injector.getBean(IRunListener.class);
 
 	@Override
 	public void start() {
@@ -44,15 +43,7 @@ class ReportPortalSpockExtension implements IGlobalExtension {
 
 	@Override
 	public void visitSpec(SpecInfo spec) {
-		/*
-		 * Spec is registered here, because in the case of error in the
-		 * SHARED_INITIALIZER beforeSpec(...) on the listener isn't called
-		 */
-		spockReporter.registerSpec(spec);
-		for (MethodInfo fixture : spec.getAllFixtureMethods()) {
-			fixture.addInterceptor(fixturesInterceptor);
-		}
-		spec.addListener(new ReportableRunListener(spockReporter));
+		spec.addListener(reportingRunListener);
 	}
 
 	@Override

@@ -23,7 +23,7 @@ package com.epam.reportportal.spock;
 import static com.epam.reportportal.listeners.Statuses.FAILED;
 import static com.epam.reportportal.listeners.Statuses.SKIPPED;
 import static com.epam.reportportal.spock.NodeInfoUtils.buildFeatureDescription;
-import static com.epam.reportportal.spock.NodeInfoUtils.retrieveSpecName;
+import static com.epam.reportportal.spock.NodeInfoUtils.getFixtureDisplayName;
 import static com.epam.reportportal.spock.ReportableItemFootprint.IS_PUBLISHED_CONDITION;
 import static com.google.common.collect.Iterables.filter;
 import static com.google.common.collect.Iterables.getFirst;
@@ -104,13 +104,17 @@ class SpockReporter implements ISpockReporter {
 
 	@Override
 	public void registerFixture(MethodInfo fixture) {
-		MethodKind kind = fixture.getKind();
 		NodeFootprint specFootprint = launchContext.findSpecFootprint(fixture.getParent());
-		StartTestItemRQ rq = createBaseStartTestItemRQ(fixture.getName(), ITEM_TYPES_REGISTRY.get(kind));
+		boolean isFixtureInherited = !fixture.getParent().equals(specFootprint.getItem());
+		String fixtureDisplayName = getFixtureDisplayName(fixture, isFixtureInherited);
+		MethodKind kind = fixture.getKind();
+		StartTestItemRQ rq = createBaseStartTestItemRQ(fixtureDisplayName, ITEM_TYPES_REGISTRY.get(kind));
 		try {
 			EntryCreatedRS rs = reportPortalService.startTestItem(specFootprint.getId(), rq);
-			NodeFootprint fixtureOwnerFootprint = specFootprint;
-			if (kind.isFeatureScopedFixtureMethod()) {
+			NodeFootprint fixtureOwnerFootprint;
+			if(kind.isSpecScopedFixtureMethod()) {
+				fixtureOwnerFootprint = specFootprint;
+			} else {
 				IterationInfo currentIteration = launchContext.getRuntimePointer().getCurrentIteration();
 				fixtureOwnerFootprint = launchContext.findIterationFootprint(currentIteration);
 			}
@@ -127,8 +131,8 @@ class SpockReporter implements ISpockReporter {
 		if (launchContext.isSpecRegistered(spec)) {
 			return;
 		}
-		StartTestItemRQ rq = createBaseStartTestItemRQ(retrieveSpecName(spec), ITEM_TYPES_REGISTRY.get(SPEC_EXECUTION));
-		rq.setDescription(NodeInfoUtils.retrieveSpecNarrative(spec));
+		StartTestItemRQ rq = createBaseStartTestItemRQ(spec.getName(), ITEM_TYPES_REGISTRY.get(SPEC_EXECUTION));
+		rq.setDescription(spec.getNarrative());
 		try {
 			EntryCreatedRS rs = reportPortalService.startRootTestItem(rq);
 			launchContext.addRunningSpec(rs.getId(), spec);
@@ -167,6 +171,7 @@ class SpockReporter implements ISpockReporter {
 
 	@Override
 	public void trackSkippedSpec(SpecInfo spec) {
+		registerSpec(spec);
 		ReportableItemFootprint specFootprint = launchContext.findSpecFootprint(spec);
 		specFootprint.setStatus(SKIPPED);
 	}
@@ -216,58 +221,44 @@ class SpockReporter implements ISpockReporter {
 
 	@Override
 	public void reportError(ErrorInfo error) {
-
 		MethodInfo errorSource = error.getMethod();
-		switch (errorSource.getKind()) {
+		MethodKind errorSourceKind = errorSource.getKind();
+		ReportableItemFootprint errorSourceFootprint = null;
 
-		case SHARED_INITIALIZER:
-			SpecInfo specInfo = launchContext.getRuntimePointer().getCurrentSpec();
-			NodeFootprint specFootprint = launchContext.findSpecFootprint(specInfo);
-			specFootprint.setStatus(FAILED);
-			reportTestItemFailure(specFootprint, error);
-			break;
+		if (FEATURE.equals(errorSourceKind)) {
+			IterationInfo iterationInfo = launchContext.getRuntimePointer().getCurrentIteration();
+			errorSourceFootprint = launchContext.findIterationFootprint(iterationInfo);
 
-		case SETUP_SPEC:
-		case CLEANUP_SPEC:
-			NodeFootprint originalSpecFootprint = launchContext.findSpecFootprint(errorSource.getParent());
-			FixtureFootprint specFixtureFootprint = originalSpecFootprint.findFixtureFootprint(errorSource, null);
-			if (!specFixtureFootprint.isPublished()) {
-				specFixtureFootprint.setStatus(FAILED);
-				// originalSpecFootprint.setStatus(FAILED);
-				reportTestItemFailure(specFixtureFootprint, error);
-			}
-			break;
+		} else if (SHARED_INITIALIZER.equals(errorSourceKind)) {
+			SpecInfo sourceSpec = errorSource.getParent();
+			/*
+			Explicitly register specification here, because in the case of shared initializer error
+			appropriate listener method isn't triggered
+			 */
+			registerSpec(sourceSpec);
+			errorSourceFootprint = launchContext.findSpecFootprint(sourceSpec);
 
-		case DATA_PROCESSOR:
-		case INITIALIZER:
+		} else if (DATA_PROCESSOR.equals(errorSourceKind) || INITIALIZER.equals(errorSourceKind)) {
 			FeatureInfo featureInfo = launchContext.getRuntimePointer().getCurrentFeature();
 			IterationInfo maskedIteration = buildIterationMaskForFeature(featureInfo);
 			registerIteration(maskedIteration);
-			NodeFootprint maskedIterationFootprint = launchContext.findIterationFootprint(maskedIteration);
-			maskedIterationFootprint.setStatus(FAILED);
-			reportTestItemFailure(maskedIterationFootprint, error);
-			break;
+			errorSourceFootprint = launchContext.findIterationFootprint(maskedIteration);
 
-		case SETUP:
-		case CLEANUP:
+		} else if (errorSourceKind.isSpecScopedFixtureMethod()) {
+			NodeFootprint originalSpecFootprint = launchContext.findSpecFootprint(errorSource.getParent());
+			errorSourceFootprint = originalSpecFootprint.findFixtureFootprint(errorSource, null);
+
+		} else if (errorSourceKind.isFeatureScopedFixtureMethod()) {
 			IterationInfo runningIteration = launchContext.getRuntimePointer().getCurrentIteration();
 			NodeFootprint originalIterationFootprint = launchContext.findIterationFootprint(runningIteration);
-			FixtureFootprint iterationFixtureFootprint = originalIterationFootprint.findFixtureFootprint(errorSource, null);
-			if (!iterationFixtureFootprint.isPublished()) {
-				iterationFixtureFootprint.setStatus(FAILED);
-				reportTestItemFailure(iterationFixtureFootprint, error);
-			}
-			break;
+			errorSourceFootprint = originalIterationFootprint.findFixtureFootprint(errorSource, null);
+		} else {
+			LOGGER.warn("Unable to handle error of type {}", errorSourceKind);
+		}
 
-		case FEATURE:
-			IterationInfo iterationInfo = launchContext.getRuntimePointer().getCurrentIteration();
-			NodeFootprint iterationFootprint = launchContext.findIterationFootprint(iterationInfo);
-			iterationFootprint.setStatus(FAILED);
-			reportTestItemFailure(iterationFootprint, error);
-			break;
-
-		default:
-			LOGGER.warn("Unable to handle error of type {}", errorSource.getKind());
+		if (errorSourceFootprint != null && !errorSourceFootprint.isPublished()) {
+			errorSourceFootprint.setStatus(FAILED);
+			reportTestItemFailure(errorSourceFootprint, error);
 		}
 	}
 
@@ -348,6 +339,7 @@ class SpockReporter implements ISpockReporter {
 	private IterationInfo buildIterationMaskForFeature(FeatureInfo featureInfo) {
 		IterationInfo iterationInfo = new IterationInfo(featureInfo, null, 0);
 		iterationInfo.setName(featureInfo.getName());
+		iterationInfo.setDescription(featureInfo.getDescription());
 		return iterationInfo;
 	}
 

@@ -20,8 +20,6 @@
  */
 package com.epam.reportportal.spock;
 
-import static com.epam.reportportal.spock.NodeInfoUtils.getMethodIdentifier;
-
 import org.spockframework.runtime.model.MethodInfo;
 
 /**
@@ -29,15 +27,8 @@ import org.spockframework.runtime.model.MethodInfo;
  */
 class FixtureFootprint extends ReportableItemFootprint<MethodInfo> {
 
-	private final String fullName;
-
 	FixtureFootprint(MethodInfo item, String id) {
 		super(item, id);
-		this.fullName = getMethodIdentifier(getItem());
-	}
-
-	public String getFullName() {
-		return fullName;
 	}
 
 	@Override

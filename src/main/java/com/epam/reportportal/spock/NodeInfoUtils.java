@@ -21,7 +21,8 @@
 package com.epam.reportportal.spock;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
-import static com.google.common.base.Strings.nullToEmpty;
+import static java.lang.String.format;
+import static java.util.Collections.synchronizedMap;
 import static org.spockframework.runtime.model.BlockKind.WHERE;
 
 import java.util.Iterator;
@@ -29,27 +30,23 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.Maps;
 import org.spockframework.runtime.model.*;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-
-import spock.lang.Narrative;
-import spock.lang.Title;
+import com.google.common.collect.Maps;
 
 /**
  * Created by Dzmitry_Mikhievich
  */
 class NodeInfoUtils {
 
+	private static final String INHERITED_FIXTURE_NAME_TEMPLATE = "%s#%s";
 	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
-	private static final String IDENTIFIER_SEPARATOR = ".";
 	private static final String BLOCK_SPLITTER = ": ";
-
-	private static final Map<BlockKind, String> BLOCK_NAMES = Maps.newEnumMap(BlockKind.class);
-
 	private static final String CONJUNCTION_KEYWORD = "And";
+
+	private static final Map<BlockKind, String> BLOCK_NAMES = synchronizedMap(Maps.<BlockKind, String> newEnumMap(BlockKind.class));
 
 	private static final Predicate<BlockInfo> SKIP_BLOCK_CONDITION = new Predicate<BlockInfo>() {
 		@Override
@@ -78,7 +75,7 @@ class NodeInfoUtils {
 		while (blocksIterator.hasNext()) {
 			BlockInfo block = blocksIterator.next();
 			if (!SKIP_BLOCK_CONDITION.apply(block)) {
-                appendBlockInfo(description, block);
+				appendBlockInfo(description, block);
 				boolean notLast = blocksIterator.hasNext();
 				if (notLast) {
 					description.append(LINE_SEPARATOR);
@@ -88,52 +85,34 @@ class NodeInfoUtils {
 		return description.toString();
 	}
 
-	@Nullable
-	static String retrieveSpecNarrative(SpecInfo specInfo) {
-		Narrative narrative = specInfo.getAnnotation(Narrative.class);
-		return narrative != null ? narrative.value() : null;
-	}
-
-	static String retrieveSpecName(SpecInfo specInfo) {
-		Title title = specInfo.getAnnotation(Title.class);
-		return title != null ? title.value() : specInfo.getName();
-	}
-
-	static String getMethodIdentifier(MethodInfo method) {
-		StringBuilder buffer = new StringBuilder(getSpecIdentifier(method.getParent()));
-		FeatureInfo featureInfo = method.getFeature();
-		if(featureInfo != null) {
-			buffer.append(IDENTIFIER_SEPARATOR).append(featureInfo.getName());
+	static String getFixtureDisplayName(MethodInfo methodInfo, boolean inherited) {
+		String fixtureName = methodInfo.getName();
+		if (inherited) {
+			String sourceSpecName = methodInfo.getParent().getReflection().getSimpleName();
+			return format(INHERITED_FIXTURE_NAME_TEMPLATE, sourceSpecName, fixtureName);
 		}
-		return buffer.append(IDENTIFIER_SEPARATOR).append(method.getName()).toString();
+		return fixtureName;
 	}
 
-	//TODO optimize
-	static String getSpecIdentifier(SpecInfo spec) {
-		if(spec != null) {
-			return nullToEmpty(spec.getPackage()) + IDENTIFIER_SEPARATOR + spec.getFilename();
-		}
-		return "";
+	static String getSpecIdentifier(SpecInfo specInfo) {
+		return specInfo != null ? specInfo.getReflection().getName() : "";
 	}
 
 	private static void appendBlockInfo(StringBuilder featureDescription, BlockInfo block) {
 		featureDescription.append(formatBlockKind(block.getKind())).append(BLOCK_SPLITTER);
 		Iterator<String> textsIterator = block.getTexts().iterator();
-        //append heading block
-		if(textsIterator.hasNext()) {
+		// append heading block
+		if (textsIterator.hasNext()) {
 			featureDescription.append(textsIterator.next());
 		}
-        //append conjunction blocks
-		while(textsIterator.hasNext()) {
-			featureDescription.append(LINE_SEPARATOR)
-					.append(CONJUNCTION_KEYWORD)
-					.append(BLOCK_SPLITTER)
-					.append(textsIterator.next());
+		// append conjunction blocks
+		while (textsIterator.hasNext()) {
+			featureDescription.append(LINE_SEPARATOR).append(CONJUNCTION_KEYWORD).append(BLOCK_SPLITTER).append(textsIterator.next());
 		}
 	}
 
 	static String formatBlockKind(BlockKind blockKind) {
-		if(BLOCK_NAMES.containsKey(blockKind)) {
+		if (BLOCK_NAMES.containsKey(blockKind)) {
 			return BLOCK_NAMES.get(blockKind);
 		} else {
 			char[] initialChars = blockKind.name().toCharArray();
