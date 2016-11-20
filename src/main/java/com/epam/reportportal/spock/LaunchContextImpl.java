@@ -48,19 +48,19 @@ class LaunchContextImpl extends AbstractLaunchContext {
 
 	@Override
 	public void addRunningSpec(String id, SpecInfo specInfo) {
-		Specification specification = new Specification(specInfo, id);
+		Specification specFootprint = new Specification(specInfo, id);
 		String specIdentifier = getSpecIdentifier(specInfo);
 		runtimePointersRegistry.put(specIdentifier, new RuntimePointer());
-		specFootprintsRegistry.put(specIdentifier, specification);
+		specFootprintsRegistry.put(specIdentifier, specFootprint);
 	}
 
 	@Override
 	public void addRunningFeature(FeatureInfo featureInfo) {
 		SpecInfo specInfo = featureInfo.getSpec();
-		Specification specification = findSpecFootprint(featureInfo.getSpec());
-		if (specification != null) {
+		Specification specFootprint = findSpecFootprint(featureInfo.getSpec());
+		if (specFootprint != null) {
 			getRuntimePointerForSpec(specInfo).setFeatureInfo(featureInfo);
-			specification.addRunningFeature(featureInfo);
+			specFootprint.addRunningFeature(featureInfo);
 		}
 	}
 
@@ -79,9 +79,9 @@ class LaunchContextImpl extends AbstractLaunchContext {
 
 	@Override
 	public NodeFootprint<IterationInfo> findIterationFootprint(IterationInfo iterationInfo) {
-		Specification specification = findSpecFootprint(iterationInfo.getFeature().getSpec());
-		if (specification != null) {
-			Feature feature = specification.getFeature(iterationInfo.getFeature());
+		Specification specFootprint = findSpecFootprint(iterationInfo.getFeature().getSpec());
+		if (specFootprint != null) {
+			Feature feature = specFootprint.getFeature(iterationInfo.getFeature());
 			if (feature != null) {
 				return feature.getIteration(iterationInfo);
 			}
@@ -91,9 +91,9 @@ class LaunchContextImpl extends AbstractLaunchContext {
 
 	@Override
 	public Iterable<Iteration> findIterationFootprints(FeatureInfo featureInfo) {
-		Specification specification = findSpecFootprint(featureInfo.getSpec());
-		if (specification != null) {
-			return specification.getFeature(featureInfo).getAllTrackedIteration();
+		Specification specFootprint = findSpecFootprint(featureInfo.getSpec());
+		if (specFootprint != null) {
+			return specFootprint.getFeature(featureInfo).getAllTrackedIteration();
 		}
 		return null;
 	}

@@ -42,7 +42,6 @@ class SpockListenersModule extends AbstractModule {
 	}
 
 	@Provides
-	@Singleton
 	private AbstractLaunchContext launchContext() {
 		return new LaunchContextImpl();
 	}

@@ -32,6 +32,7 @@ import static org.spockframework.runtime.model.MethodKind.*;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
 
@@ -71,6 +72,8 @@ class SpockReporter implements ISpockReporter {
 			.put(SPEC_EXECUTION, "TEST").put(SETUP_SPEC, "BEFORE_CLASS").put(SETUP, "BEFORE_METHOD").put(FEATURE, "STEP")
 			.put(CLEANUP, "AFTER_METHOD").put(CLEANUP_SPEC, "AFTER_CLASS").build();
 
+	private final AtomicBoolean rpIsDown = new AtomicBoolean(false);
+
 	private final IReportPortalService reportPortalService;
 
 	private final Set<String> launchTags;
@@ -96,15 +99,18 @@ class SpockReporter implements ISpockReporter {
 			try {
 				EntryCreatedRS response = reportPortalService.startLaunch(startLaunchRQ);
 				launchContext.setLaunchId(response.getId());
-			} catch (RestEndpointIOException exception) {
-				String errorMessage = "Unable start the launch: '" + launchName + "'";
-				ListenersUtils.handleException(exception, LOGGER, errorMessage);
+			} catch (RestEndpointIOException ex) {
+				handleRpException(ex, "Unable start the launch: '" + launchName + "'");
 			}
 		}
 	}
 
 	@Override
 	public void registerFixture(MethodInfo fixture) {
+		if (rpIsDown.get()) {
+			return;
+		}
+
 		NodeFootprint specFootprint = launchContext.findSpecFootprint(fixture.getParent());
 		boolean isFixtureInherited = !fixture.getParent().equals(specFootprint.getItem());
 		String fixtureDisplayName = getFixtureDisplayName(fixture, isFixtureInherited);
@@ -112,40 +118,36 @@ class SpockReporter implements ISpockReporter {
 		StartTestItemRQ rq = createBaseStartTestItemRQ(fixtureDisplayName, ITEM_TYPES_REGISTRY.get(kind));
 		try {
 			EntryCreatedRS rs = reportPortalService.startTestItem(specFootprint.getId(), rq);
-			NodeFootprint fixtureOwnerFootprint;
-			if (kind.isSpecScopedFixtureMethod()) {
-				fixtureOwnerFootprint = specFootprint;
-			} else {
-				SpecInfo sourceSpec = fixture.getParent();
-				IterationInfo currentIteration = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentIteration();
-				fixtureOwnerFootprint = launchContext.findIterationFootprint(currentIteration);
-			}
+			NodeFootprint fixtureOwnerFootprint = findFixtureOwner(fixture);
 			fixtureOwnerFootprint.addFixtureFootprint(new FixtureFootprint(fixture, rs.getId()));
 			ReportPortalListenerContext.setRunningNowItemId(rs.getId());
-		} catch (Exception e) {
-			String message = "Unable to start '" + fixtureDisplayName + "' fixture";
-			ListenersUtils.handleException(e, LOGGER, message);
+		} catch (RestEndpointIOException ex) {
+			handleRpException(ex, "Unable to start '" + fixtureDisplayName + "' fixture");
 		}
 	}
 
 	@Override
 	public void registerSpec(SpecInfo spec) {
-		if (launchContext.isSpecRegistered(spec)) {
+		if (rpIsDown.get() || launchContext.isSpecRegistered(spec)) {
 			return;
 		}
+
 		StartTestItemRQ rq = createBaseStartTestItemRQ(spec.getName(), ITEM_TYPES_REGISTRY.get(SPEC_EXECUTION));
 		rq.setDescription(spec.getNarrative());
 		try {
 			EntryCreatedRS rs = reportPortalService.startRootTestItem(rq);
 			launchContext.addRunningSpec(rs.getId(), spec);
-		} catch (Exception e) {
-			String message = "Unable start spec: '" + spec.getName() + "'";
-			ListenersUtils.handleException(e, LOGGER, message);
+		} catch (RestEndpointIOException ex) {
+			handleRpException(ex, "Unable start spec: '" + spec.getName() + "'");
 		}
 	}
 
 	@Override
 	public void registerFeature(FeatureInfo feature) {
+		if (rpIsDown.get()) {
+			return;
+		}
+
 		launchContext.addRunningFeature(feature);
 		if (isMonolithicParametrizedFeature(feature) && !feature.isSkipped()) {
 			IterationInfo maskedIteration = buildIterationMaskForFeature(feature);
@@ -155,6 +157,10 @@ class SpockReporter implements ISpockReporter {
 
 	@Override
 	public void registerIteration(IterationInfo iteration) {
+		if (rpIsDown.get()) {
+			return;
+		}
+
 		if (!isMonolithicParametrizedFeature(iteration.getFeature())) {
 			reportIterationStart(iteration);
 		}
@@ -162,6 +168,10 @@ class SpockReporter implements ISpockReporter {
 
 	@Override
 	public void trackSkippedFeature(FeatureInfo featureInfo) {
+		if (rpIsDown.get()) {
+			return;
+		}
+
 		IterationInfo maskedIteration = buildIterationMaskForFeature(featureInfo);
 		reportIterationStart(maskedIteration);
 		// set skipped status in an appropriate footprint
@@ -173,6 +183,10 @@ class SpockReporter implements ISpockReporter {
 
 	@Override
 	public void trackSkippedSpec(SpecInfo spec) {
+		if (rpIsDown.get()) {
+			return;
+		}
+
 		registerSpec(spec);
 		ReportableItemFootprint specFootprint = launchContext.findSpecFootprint(spec);
 		specFootprint.setStatus(SKIPPED);
@@ -180,27 +194,31 @@ class SpockReporter implements ISpockReporter {
 
 	@Override
 	public void publishFixtureResult(MethodInfo fixture) {
-		MethodKind kind = fixture.getKind();
-		NodeFootprint ownerFootprint;
-		if (kind.isSpecScopedFixtureMethod()) {
-			ownerFootprint = launchContext.findSpecFootprint(fixture.getParent());
-		} else {
-			SpecInfo sourceSpec = fixture.getParent();
-			IterationInfo currentIteration = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentIteration();
-			ownerFootprint = launchContext.findIterationFootprint(currentIteration);
+		if (rpIsDown.get()) {
+			return;
 		}
+
+		NodeFootprint ownerFootprint = findFixtureOwner(fixture);
 		ReportableItemFootprint fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(fixture);
 		reportTestItemFinish(fixtureFootprint);
 	}
 
 	@Override
 	public void publishSpecResult(SpecInfo spec) {
+		if (rpIsDown.get()) {
+			return;
+		}
+
 		ReportableItemFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
 		reportTestItemFinish(specFootprint);
 	}
 
 	@Override
 	public void publishIterationResult(IterationInfo iteration) {
+		if (rpIsDown.get()) {
+			return;
+		}
+
 		FeatureInfo feature = iteration.getFeature();
 		if (!isMonolithicParametrizedFeature(feature)) {
 			ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(iteration);
@@ -210,6 +228,10 @@ class SpockReporter implements ISpockReporter {
 
 	@Override
 	public void publishFeatureResult(FeatureInfo feature) {
+		if (rpIsDown.get()) {
+			return;
+		}
+
 		if (isMonolithicParametrizedFeature(feature)) {
 			ReportableItemFootprint<IterationInfo> footprint = getFirst(launchContext.findIterationFootprints(feature), null);
 			reportTestItemFinish(footprint);
@@ -224,6 +246,10 @@ class SpockReporter implements ISpockReporter {
 
 	@Override
 	public void reportError(ErrorInfo error) {
+		if (rpIsDown.get()) {
+			return;
+		}
+
 		MethodInfo errorSource = error.getMethod();
 		SpecInfo sourceSpec = errorSource.getParent();
 		MethodKind errorSourceKind = errorSource.getKind();
@@ -235,9 +261,8 @@ class SpockReporter implements ISpockReporter {
 
 		} else if (SHARED_INITIALIZER.equals(errorSourceKind)) {
 			/*
-			 * Explicitly register specification here, because in the case of
-			 * shared initializer error appropriate listener method isn't
-			 * triggered
+			 * Explicitly register specification here, because in the case of shared initializer
+			 * error appropriate listener method isn't triggered
 			 */
 			registerSpec(sourceSpec);
 			errorSourceFootprint = launchContext.findSpecFootprint(sourceSpec);
@@ -249,7 +274,7 @@ class SpockReporter implements ISpockReporter {
 			errorSourceFootprint = launchContext.findIterationFootprint(maskedIteration);
 
 		} else if (errorSourceKind.isSpecScopedFixtureMethod()) {
-			NodeFootprint originalSpecFootprint = launchContext.findSpecFootprint(errorSource.getParent());
+			NodeFootprint originalSpecFootprint = launchContext.findSpecFootprint(sourceSpec);
 			errorSourceFootprint = originalSpecFootprint.findFixtureFootprint(errorSource);
 
 		} else if (errorSourceKind.isFeatureScopedFixtureMethod()) {
@@ -277,9 +302,8 @@ class SpockReporter implements ISpockReporter {
 			FinishExecutionRQ rq = createFinishExecutionRQ();
 			try {
 				reportPortalService.finishLaunch(launchContext.getLaunchId(), rq);
-			} catch (RestEndpointIOException exception) {
-				String errorMessage = "Unable finish the launch: '" + launchContext.getLaunchId() + "'";
-				ListenersUtils.handleException(exception, LOGGER, errorMessage);
+			} catch (RestEndpointIOException ex) {
+				handleRpException(ex,"Unable finish the launch: '" + launchContext.getLaunchId() + "'");
 			}
 		}
 	}
@@ -294,9 +318,8 @@ class SpockReporter implements ISpockReporter {
 			EntryCreatedRS rs = reportPortalService.startTestItem(specId, rq);
 			launchContext.addRunningIteration(rs.getId(), iteration);
 			ReportPortalListenerContext.setRunningNowItemId(rs.getId());
-		} catch (Exception e) {
-			String message = "Unable start test method: '" + iteration.getName() + "'";
-			ListenersUtils.handleException(e, LOGGER, message);
+		} catch (RestEndpointIOException ex) {
+			handleRpException(ex, "Unable start test method: '" + iteration.getName() + "'");
 		}
 	}
 
@@ -309,9 +332,8 @@ class SpockReporter implements ISpockReporter {
 			if (!footprint.hasDescendants()) {
 				ReportPortalListenerContext.setRunningNowItemId(null);
 			}
-		} catch (Exception e) {
-			String message = "Unable finish " + footprint.getClass().getSimpleName() + ": '" + footprint.getItemName() + "'";
-			ListenersUtils.handleException(e, LOGGER, message);
+		} catch (RestEndpointIOException ex) {
+			handleRpException(ex, "Unable finish " + footprint.getClass().getSimpleName() + ": '" + footprint.getItemName() + "'");
 		} finally {
 			footprint.markAsPublished();
 		}
@@ -325,8 +347,8 @@ class SpockReporter implements ISpockReporter {
 		saveLogRQ.setLevel("ERROR");
 		try {
 			reportPortalService.log(saveLogRQ);
-		} catch (Exception e1) {
-			ListenersUtils.handleException(e1, LOGGER, "Unable to send message to Report Portal");
+		} catch (RestEndpointIOException ex) {
+			handleRpException(ex, "Unable to send message to Report Portal");
 		}
 	}
 
@@ -361,6 +383,22 @@ class SpockReporter implements ISpockReporter {
 		rq.setType(type);
 		rq.setLaunchId(launchContext.getLaunchId());
 		return rq;
+	}
+
+	private void handleRpException(RestEndpointIOException rpException, String message) {
+		rpIsDown.set(true);
+		ListenersUtils.handleException(rpException, LOGGER, message);
+	}
+
+	private NodeFootprint findFixtureOwner(MethodInfo fixture) {
+		MethodKind kind = fixture.getKind();
+		if (kind.isSpecScopedFixtureMethod()) {
+			return launchContext.findSpecFootprint(fixture.getParent());
+		} else {
+			SpecInfo sourceSpec = fixture.getParent();
+			IterationInfo currentIteration = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentIteration();
+			return launchContext.findIterationFootprint(currentIteration);
+		}
 	}
 
 	private static String calculateFootprintStatus(ReportableItemFootprint<?> footprint) {
