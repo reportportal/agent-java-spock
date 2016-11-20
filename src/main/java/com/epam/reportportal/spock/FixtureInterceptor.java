@@ -27,7 +27,10 @@ import org.spockframework.runtime.extension.IMethodInvocation;
 import org.spockframework.runtime.model.ErrorInfo;
 
 /**
- * Created by Dzmitry_Mikhievich
+ * Implementation of {@link org.spockframework.runtime.extension.IMethodInterceptor}, which allows to report
+ * fixture method execution
+ *
+ * @author Dzmitry Mikhievich
  */
 class FixtureInterceptor implements IMethodInterceptor {
 

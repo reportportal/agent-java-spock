@@ -37,7 +37,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
 /**
- * Created by Dzmitry_Mikhievich
+ * Utility class, which provides static convenience methods for the operations on
+ * {@link org.spockframework.runtime.model.NodeInfo} and its derivatives
+ *
+ * @author Dzmitry Mikhievich
  */
 class NodeInfoUtils {
 
@@ -69,6 +72,15 @@ class NodeInfoUtils {
 	private NodeInfoUtils() {
 	}
 
+	/**
+	 * Create textual description for the provided feature info.
+	 * Description includes formatted blocks excluding ones which carry no semantic load.
+	 * <p><i>Please, be advised that generated description can be differ from the original blocks representation in the code
+	 * due specifics of the Spock model.</i>
+	 *
+	 * @param featureInfo target feature info
+	 * @return description
+     */
 	static String buildFeatureDescription(FeatureInfo featureInfo) {
 		StringBuilder description = new StringBuilder();
 		Iterator<BlockInfo> blocksIterator = featureInfo.getBlocks().iterator();
@@ -85,6 +97,13 @@ class NodeInfoUtils {
 		return description.toString();
 	}
 
+	/**
+	 * Get display name of the fixture. If fixture is inherited, display name is started from the source specification name.
+	 *
+	 * @param methodInfo method info of fixture
+	 * @param inherited indicates if fixture is inherited
+     * @return display name
+     */
 	static String getFixtureDisplayName(MethodInfo methodInfo, boolean inherited) {
 		String fixtureName = methodInfo.getName();
 		if (inherited) {
@@ -94,6 +113,12 @@ class NodeInfoUtils {
 		return fixtureName;
 	}
 
+	/**
+	 * Get unique specification identifier.
+	 *
+	 * @param specInfo target spec
+	 * @return identifier. If null {@code specInfo} is passed, empty identifier will be returned.
+     */
 	static String getSpecIdentifier(SpecInfo specInfo) {
 		return specInfo != null ? specInfo.getReflection().getName() : "";
 	}
@@ -111,7 +136,13 @@ class NodeInfoUtils {
 		}
 	}
 
-	static String formatBlockKind(BlockKind blockKind) {
+	/**
+	 * Get formatted block kind representation.
+	 *
+	 * @param blockKind kind
+	 * @return capitalized block kind name
+     */
+	private static String formatBlockKind(BlockKind blockKind) {
 		if (BLOCK_NAMES.containsKey(blockKind)) {
 			return BLOCK_NAMES.get(blockKind);
 		} else {

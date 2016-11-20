@@ -24,42 +24,47 @@ import org.spockframework.runtime.model.FeatureInfo;
 import org.spockframework.runtime.model.IterationInfo;
 import org.spockframework.runtime.model.SpecInfo;
 
+import javax.annotation.Nullable;
+
 /**
+ * Context which stores and provides the reporting meta data during the test launch
+ *
  * @author Dzmitry Mikhievich
  */
 abstract class AbstractLaunchContext {
 
 	private String launchId;
 
-	public String getLaunchId() {
+	@Nullable
+	String getLaunchId() {
 		return launchId;
 	}
 
-	public void setLaunchId(String launchId) {
+	void setLaunchId(String launchId) {
 		this.launchId = launchId;
 	}
 
-	public boolean isSpecRegistered(SpecInfo specInfo) {
+	boolean isSpecRegistered(SpecInfo specInfo) {
 		return findSpecFootprint(specInfo) != null;
 	}
 
-	public abstract void addRunningSpec(String id, SpecInfo specInfo);
+	abstract void addRunningSpec(String id, SpecInfo specInfo);
 
-	public abstract void addRunningFeature(FeatureInfo featureInfo);
+	abstract void addRunningFeature(FeatureInfo featureInfo);
 
-	public abstract void addRunningIteration(String id, IterationInfo iterationInfo);
+	abstract void addRunningIteration(String id, IterationInfo iterationInfo);
 
-	public abstract NodeFootprint<IterationInfo> findIterationFootprint(IterationInfo iterationInfo);
+	abstract NodeFootprint<IterationInfo> findIterationFootprint(IterationInfo iterationInfo);
 
-	public abstract Iterable<? extends NodeFootprint<IterationInfo>> findIterationFootprints(FeatureInfo featureInfo);
+	abstract Iterable<? extends NodeFootprint<IterationInfo>> findIterationFootprints(FeatureInfo featureInfo);
 
-	public abstract NodeFootprint<SpecInfo> findSpecFootprint(SpecInfo specInfo);
+	abstract NodeFootprint<SpecInfo> findSpecFootprint(SpecInfo specInfo);
 
-	public abstract Iterable<? extends NodeFootprint<SpecInfo>> findAllUnpublishedSpecFootprints();
+	abstract Iterable<? extends NodeFootprint<SpecInfo>> findAllUnpublishedSpecFootprints();
 
-	public abstract IRuntimePointer getRuntimePointer();
+	abstract IRuntimePointer getRuntimePointer();
 
-	public interface IRuntimePointer {
+	interface IRuntimePointer {
 
 		SpecInfo getCurrentSpec();
 

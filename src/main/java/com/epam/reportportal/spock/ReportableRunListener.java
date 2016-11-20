@@ -29,6 +29,9 @@ import org.spockframework.runtime.extension.IMethodInterceptor;
 import org.spockframework.runtime.model.*;
 
 /**
+ * Implementation of {@link org.spockframework.runtime.AbstractRunListener}, which transmits <i>Spock</i> runtime events
+ * to the {@link ISpockReporter} instance and adds provided {@link IMethodInterceptor} fixtures hook for each passed <i>spec</i>
+ *
  * @author Dzmitry Mikhievich
  */
 class ReportableRunListener extends AbstractRunListener {

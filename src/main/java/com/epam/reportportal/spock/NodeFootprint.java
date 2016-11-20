@@ -35,7 +35,10 @@ import org.spockframework.runtime.model.NodeInfo;
 import com.google.common.base.Predicate;
 
 /**
- * Created by Dzmitry_Mikhievich
+ * Abstract entity for the representation of the metadata for the reportable
+ * <i>Spock</i> test item (specification, iteration, etc.)
+ *
+ * @author Dzmitry Mikhievich
  */
 abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFootprint<T> {
 
@@ -46,35 +49,42 @@ abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFootprint
 	 */
 	private static final int APPROXIMATE_CAPACITY = 4;
 
-	private final List<FixtureFootprint> fixtures;
+	private final List<ReportableItemFootprint<MethodInfo>> fixtures;
 
 	NodeFootprint(T nodeInfo, String id) {
 		super(nodeInfo, id);
 		fixtures = newArrayListWithCapacity(APPROXIMATE_CAPACITY);
 	}
 
-	List<FixtureFootprint> getFixtures() {
+	List<ReportableItemFootprint<MethodInfo>> getFixtures() {
 		return newArrayList(fixtures);
 	}
 
-	public FixtureFootprint findFixtureFootprint(final MethodInfo fixture) {
-		Predicate<FixtureFootprint> criteria = createFixtureMatchPredicate(fixture);
+	ReportableItemFootprint<MethodInfo> findFixtureFootprint(final MethodInfo fixture) {
+		Predicate<ReportableItemFootprint<MethodInfo>> criteria = createFixtureMatchPredicate(fixture);
 		return find(getFixtures(), criteria);
 	}
 
-	public FixtureFootprint findUnpublishedFixtureFootprint(final MethodInfo fixture) {
-		Predicate<FixtureFootprint> criteria = and(createFixtureMatchPredicate(fixture), IS_NOT_PUBLISHED);
+	/**
+	 * Find unpublished fixture footprint. It used to address an issue, when the node footprint can have multiple fixture
+	 * footprint, wrapping the same {@link MethodInfo}
+	 * 
+	 * @param fixture target method info
+	 * @return footprint
+	 */
+	ReportableItemFootprint<MethodInfo> findUnpublishedFixtureFootprint(final MethodInfo fixture) {
+		Predicate<ReportableItemFootprint<MethodInfo>> criteria = and(createFixtureMatchPredicate(fixture), IS_NOT_PUBLISHED);
 		return find(getFixtures(), criteria);
 	}
 
-	public void addFixtureFootprint(FixtureFootprint footprint) {
+	void addFixtureFootprint(FixtureFootprint footprint) {
 		fixtures.add(footprint);
 	}
 
-	private Predicate<FixtureFootprint> createFixtureMatchPredicate(final MethodInfo fixture) {
-		return new Predicate<FixtureFootprint>() {
+	private Predicate<ReportableItemFootprint<MethodInfo>> createFixtureMatchPredicate(final MethodInfo fixture) {
+		return new Predicate<ReportableItemFootprint<MethodInfo>>() {
 			@Override
-			public boolean apply(@Nullable FixtureFootprint footprint) {
+			public boolean apply(@Nullable ReportableItemFootprint<MethodInfo> footprint) {
 				return footprint != null && fixture.equals(footprint.getItem());
 			}
 		};

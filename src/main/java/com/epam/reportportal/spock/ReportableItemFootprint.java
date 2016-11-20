@@ -30,6 +30,8 @@ import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 
 /**
+ * Base entity which stores the reporting metadata for the <i>Spock</i> test elements
+ *
  * @author Dzmitry Mikhievich
  */
 abstract class ReportableItemFootprint<T extends NodeInfo> {
@@ -54,33 +56,33 @@ abstract class ReportableItemFootprint<T extends NodeInfo> {
 		this.item = item;
 	}
 
-	public T getItem() {
+	T getItem() {
 		return item;
 	}
 
-	public String getId() {
+	String getId() {
 		return id;
 	}
 
-	public Optional<String> getStatus() {
+	Optional<String> getStatus() {
 		return Optional.fromNullable(status);
 	}
 
-	public void setStatus(String status) {
+	void setStatus(String status) {
 		this.status = status;
 	}
 
-	public void markAsPublished() {
+	void markAsPublished() {
 		this.published = true;
 	}
 
-	public boolean isPublished() {
+	boolean isPublished() {
 		return published;
 	}
 
-	public String getItemName() {
+	String getItemName() {
 		return getItem().getName();
 	}
 
-	public abstract boolean hasDescendants();
+	abstract boolean hasDescendants();
 }

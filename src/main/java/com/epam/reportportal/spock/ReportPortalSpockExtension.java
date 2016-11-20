@@ -27,6 +27,9 @@ import org.spockframework.runtime.model.SpecInfo;
 import com.epam.reportportal.guice.Injector;
 
 /**
+ * Implementation of {@link org.spockframework.runtime.extension.IGlobalExtension}, which provides the
+ * integration with Report Portal.
+ *
  * @author Dzmitry Mikhievich
  */
 public class ReportPortalSpockExtension implements IGlobalExtension {

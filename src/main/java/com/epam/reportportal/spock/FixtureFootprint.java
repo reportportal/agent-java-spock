@@ -23,7 +23,9 @@ package com.epam.reportportal.spock;
 import org.spockframework.runtime.model.MethodInfo;
 
 /**
- * Created by Dzmitry_Mikhievich
+ * Reporting metadata of the test fixtures
+ *
+ * @author Dzmitry Mikhievich
  */
 class FixtureFootprint extends ReportableItemFootprint<MethodInfo> {
 

@@ -57,12 +57,16 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 /**
+ * Default implementation of {@link ISpockReporter}, which posts test results to the RP using the
+ * {@link com.epam.reportportal.service.IReportPortalService} instance
+ *
  * @author Dzmitry Mikhievich
  */
 class SpockReporter implements ISpockReporter {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(SpockReporter.class);
 
+	//stores the bindings of Spock method kinds to the RP-specific notation
 	private static final Map<MethodKind, String> ITEM_TYPES_REGISTRY = ImmutableMap.<MethodKind, String> builder()
 			.put(SPEC_EXECUTION, "TEST").put(SETUP_SPEC, "BEFORE_CLASS").put(SETUP, "BEFORE_METHOD").put(FEATURE, "STEP")
 			.put(CLEANUP, "AFTER_METHOD").put(CLEANUP_SPEC, "AFTER_CLASS").build();
@@ -71,14 +75,15 @@ class SpockReporter implements ISpockReporter {
 
 	private final Set<String> launchTags;
 	private final String launchName;
+	private final String launchDescription;
 	private final Mode launchRunningMode;
 	private final AbstractLaunchContext launchContext;
 
 	@Inject
 	public SpockReporter(IReportPortalService reportPortalService, ListenerParameters parameters, AbstractLaunchContext launchContext) {
-
 		this.reportPortalService = reportPortalService;
 		this.launchName = parameters.getLaunchName();
+		this.launchDescription = parameters.getDescription();
 		this.launchTags = parameters.getTags();
 		this.launchRunningMode = parameters.getMode();
 		this.launchContext = launchContext;
@@ -180,7 +185,7 @@ class SpockReporter implements ISpockReporter {
 			IterationInfo currentIteration = launchContext.getRuntimePointer().getCurrentIteration();
 			ownerFootprint = launchContext.findIterationFootprint(currentIteration);
 		}
-		FixtureFootprint fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(fixture);
+		ReportableItemFootprint fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(fixture);
 		reportTestItemFinish(fixtureFootprint);
 	}
 
@@ -346,6 +351,7 @@ class SpockReporter implements ISpockReporter {
 	private StartLaunchRQ createStartLaunchRQ() {
 		StartLaunchRQ startLaunchRQ = new StartLaunchRQ();
 		startLaunchRQ.setName(launchName);
+		startLaunchRQ.setDescription(launchDescription);
 		startLaunchRQ.setStartTime(Calendar.getInstance().getTime());
 		startLaunchRQ.setTags(launchTags);
 		startLaunchRQ.setMode(launchRunningMode);

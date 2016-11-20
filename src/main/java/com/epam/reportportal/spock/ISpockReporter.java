@@ -23,10 +23,15 @@ package com.epam.reportportal.spock;
 import org.spockframework.runtime.model.*;
 
 /**
+ * Provides the API for the reporting of <i>Spock<i/> tests
+ *
  * @author Dzmitry Mikhievich
  */
 interface ISpockReporter {
 
+	/**
+	 * Trigger test execution start
+	 */
 	void startLaunch();
 
 	void registerFixture(MethodInfo fixture);
@@ -37,9 +42,19 @@ interface ISpockReporter {
 
 	void registerIteration(IterationInfo iteration);
 
+	/**
+	 * Handle feature skipping
+	 *
+	 * @param featureInfo skipped feature
+     */
 	void trackSkippedFeature(FeatureInfo featureInfo);
 
-	void trackSkippedSpec(SpecInfo spec);
+	/**
+	 * Handle specification skipping
+	 *
+	 * @param specInfo skipped feature
+	 */
+	void trackSkippedSpec(SpecInfo specInfo);
 
 	void publishFixtureResult(MethodInfo fixture);
 
@@ -51,5 +66,8 @@ interface ISpockReporter {
 
 	void reportError(ErrorInfo errorInfo);
 
+	/**
+	 * Trigger test execution end
+	 */
 	void finishLaunch();
 }

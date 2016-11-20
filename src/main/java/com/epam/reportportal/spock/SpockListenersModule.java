@@ -29,6 +29,8 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 
 /**
+ * <a href="https://github.com/google/guice">Guice</a> module definition for the Spock agent
+ *
  * @author Dzmitry Mikhievich
  */
 class SpockListenersModule extends AbstractModule {

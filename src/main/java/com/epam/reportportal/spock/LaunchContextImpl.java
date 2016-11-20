@@ -21,6 +21,7 @@
 package com.epam.reportportal.spock;
 
 import static com.epam.reportportal.spock.NodeInfoUtils.getSpecIdentifier;
+import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISHED;
 import static com.google.common.collect.Iterables.filter;
 
 import java.util.List;
@@ -36,9 +37,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
- * Default non-thread safe implementation of AbstractLaunchContext
- * <p/>
- * 
+ * Default implementation of {@link AbstractLaunchContext}
+ *
  * @author Dzmitry Mikhievich
  */
 class LaunchContextImpl extends AbstractLaunchContext {
@@ -108,7 +108,7 @@ class LaunchContextImpl extends AbstractLaunchContext {
 
 	@Override
 	public Iterable<Specification> findAllUnpublishedSpecFootprints() {
-		return filter(specsRegistry.values(), ReportableItemFootprint.IS_NOT_PUBLISHED);
+		return filter(specsRegistry.values(), IS_NOT_PUBLISHED);
 	}
 
 	@Override

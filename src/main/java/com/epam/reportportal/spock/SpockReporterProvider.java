@@ -33,6 +33,9 @@ import com.epam.reportportal.listeners.ListenerParameters;
 import com.epam.reportportal.service.BatchedReportPortalService;
 
 /**
+ * Implementation of the {@link javax.inject.Provider}, which is responsible
+ * for the provisioning of {@link ISpockReporter} instance
+ *
  * @author Dzmitry Mikhievich
  */
 class SpockReporterProvider implements Provider<ISpockReporter> {
