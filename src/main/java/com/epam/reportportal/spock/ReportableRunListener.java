@@ -20,13 +20,13 @@
  */
 package com.epam.reportportal.spock;
 
-import org.spockframework.runtime.AbstractRunListener;
-import org.spockframework.runtime.extension.IMethodInterceptor;
-import org.spockframework.runtime.model.*;
+import static com.google.common.base.Preconditions.checkArgument;
 
 import javax.inject.Inject;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import org.spockframework.runtime.AbstractRunListener;
+import org.spockframework.runtime.extension.IMethodInterceptor;
+import org.spockframework.runtime.model.*;
 
 /**
  * @author Dzmitry Mikhievich

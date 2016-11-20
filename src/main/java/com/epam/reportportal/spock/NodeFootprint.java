@@ -20,10 +20,10 @@
  */
 package com.epam.reportportal.spock;
 
+import static com.google.common.base.Predicates.and;
 import static com.google.common.collect.Iterables.find;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Lists.newArrayListWithCapacity;
-import static java.lang.Boolean.valueOf;
 
 import java.util.List;
 
@@ -57,24 +57,26 @@ abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFootprint
 		return newArrayList(fixtures);
 	}
 
-	//TODO refactor
-	public FixtureFootprint findFixtureFootprint(final MethodInfo fixture, @Nullable final Boolean isPublished) {
-		return find(getFixtures(), new Predicate<FixtureFootprint>() {
-			@Override
-			public boolean apply(@Nullable FixtureFootprint footprint) {
-				if (footprint != null) {
-					boolean areItemsEqual = fixture.equals(footprint.getItem());
-					if (isPublished != null) {
-						return areItemsEqual && isPublished.equals(valueOf(footprint.isPublished()));
-					}
-					return areItemsEqual;
-				}
-				return false;
-			}
-		});
+	public FixtureFootprint findFixtureFootprint(final MethodInfo fixture) {
+		Predicate<FixtureFootprint> criteria = createFixtureMatchPredicate(fixture);
+		return find(getFixtures(), criteria);
+	}
+
+	public FixtureFootprint findUnpublishedFixtureFootprint(final MethodInfo fixture) {
+		Predicate<FixtureFootprint> criteria = and(createFixtureMatchPredicate(fixture), IS_NOT_PUBLISHED);
+		return find(getFixtures(), criteria);
 	}
 
 	public void addFixtureFootprint(FixtureFootprint footprint) {
 		fixtures.add(footprint);
+	}
+
+	private Predicate<FixtureFootprint> createFixtureMatchPredicate(final MethodInfo fixture) {
+		return new Predicate<FixtureFootprint>() {
+			@Override
+			public boolean apply(@Nullable FixtureFootprint footprint) {
+				return footprint != null && fixture.equals(footprint.getItem());
+			}
+		};
 	}
 }

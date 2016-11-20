@@ -44,7 +44,8 @@ class FixtureInterceptor implements IMethodInterceptor {
 		try {
 			invocation.proceed();
 		} catch (Throwable ex) {
-          //explicitly report exception to has an ability to track error before result publishing
+			// explicitly report exception to has an ability to track error
+			// before result publishing
 			spockReporter.reportError(new ErrorInfo(invocation.getMethod(), ex));
 			throw ex;
 		} finally {

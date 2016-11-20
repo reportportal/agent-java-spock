@@ -34,7 +34,7 @@ import com.google.common.base.Predicate;
  */
 abstract class ReportableItemFootprint<T extends NodeInfo> {
 
-	static final Predicate<ReportableItemFootprint> IS_PUBLISHED_CONDITION = new Predicate<ReportableItemFootprint>() {
+	static final Predicate<ReportableItemFootprint> IS_NOT_PUBLISHED = new Predicate<ReportableItemFootprint>() {
 		@Override
 		public boolean apply(@Nullable ReportableItemFootprint input) {
 			return input != null && !input.isPublished();

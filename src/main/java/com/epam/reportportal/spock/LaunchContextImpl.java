@@ -21,12 +21,11 @@
 package com.epam.reportportal.spock;
 
 import static com.epam.reportportal.spock.NodeInfoUtils.getSpecIdentifier;
+import static com.google.common.collect.Iterables.filter;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import javax.annotation.Nullable;
 
 import org.spockframework.runtime.model.FeatureInfo;
 import org.spockframework.runtime.model.IterationInfo;
@@ -109,12 +108,7 @@ class LaunchContextImpl extends AbstractLaunchContext {
 
 	@Override
 	public Iterable<Specification> findAllUnpublishedSpecFootprints() {
-		return Iterables.filter(specsRegistry.values(), new Predicate<Specification>() {
-			@Override
-			public boolean apply(@Nullable Specification spec) {
-				return spec != null && !spec.isPublished();
-			}
-		});
+		return filter(specsRegistry.values(), ReportableItemFootprint.IS_NOT_PUBLISHED);
 	}
 
 	@Override
@@ -135,7 +129,7 @@ class LaunchContextImpl extends AbstractLaunchContext {
 			return true;
 		}
 
-		public void addRunningFeature(FeatureInfo featureInfo) {
+		private void addRunningFeature(FeatureInfo featureInfo) {
 			getAllTrackedFeatures().add(new Feature(featureInfo));
 		}
 
@@ -205,15 +199,15 @@ class LaunchContextImpl extends AbstractLaunchContext {
 		private FeatureInfo featureInfo;
 		private IterationInfo iterationInfo;
 
-		public void setSpecInfo(SpecInfo specInfo) {
+		private void setSpecInfo(SpecInfo specInfo) {
 			this.specInfo = specInfo;
 		}
 
-		public void setFeatureInfo(FeatureInfo featureInfo) {
+		private void setFeatureInfo(FeatureInfo featureInfo) {
 			this.featureInfo = featureInfo;
 		}
 
-		public void setIterationInfo(IterationInfo iterationInfo) {
+		private void setIterationInfo(IterationInfo iterationInfo) {
 			this.iterationInfo = iterationInfo;
 		}
 

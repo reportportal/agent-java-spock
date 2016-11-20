@@ -20,6 +20,8 @@
  */
 package com.epam.reportportal.spock;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -29,8 +31,6 @@ import javax.inject.Provider;
 
 import com.epam.reportportal.listeners.ListenerParameters;
 import com.epam.reportportal.service.BatchedReportPortalService;
-
-import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * @author Dzmitry Mikhievich
