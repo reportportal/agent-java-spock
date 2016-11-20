@@ -20,11 +20,14 @@
  */
 package com.epam.reportportal.spock;
 
+import static java.lang.Boolean.FALSE;
+import static java.lang.Boolean.TRUE;
+
+import javax.annotation.Nullable;
+
 import org.spockframework.runtime.model.FeatureInfo;
 import org.spockframework.runtime.model.IterationInfo;
 import org.spockframework.runtime.model.SpecInfo;
-
-import javax.annotation.Nullable;
 
 /**
  * Context which stores and provides the reporting meta data during the test launch
@@ -33,6 +36,7 @@ import javax.annotation.Nullable;
  */
 abstract class AbstractLaunchContext {
 
+	private Boolean launchInProgress;
 	private String launchId;
 
 	@Nullable
@@ -42,6 +46,30 @@ abstract class AbstractLaunchContext {
 
 	void setLaunchId(String launchId) {
 		this.launchId = launchId;
+	}
+
+	/**
+	 * @return true if launch status hadn't been started previously, false
+	 *         otherwise
+	 */
+	synchronized boolean tryStartLaunch() {
+		if (launchInProgress == null) {
+			this.launchInProgress = TRUE;
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * @return true if launch status hadn't been started previously, false
+	 *         otherwise
+	 */
+	synchronized boolean tryFinishLaunch() {
+		if (TRUE.equals(launchInProgress)) {
+			this.launchInProgress = FALSE;
+			return true;
+		}
+		return false;
 	}
 
 	boolean isSpecRegistered(SpecInfo specInfo) {
@@ -62,11 +90,9 @@ abstract class AbstractLaunchContext {
 
 	abstract Iterable<? extends NodeFootprint<SpecInfo>> findAllUnpublishedSpecFootprints();
 
-	abstract IRuntimePointer getRuntimePointer();
+	abstract IRuntimePointer getRuntimePointerForSpec(SpecInfo specInfo);
 
 	interface IRuntimePointer {
-
-		SpecInfo getCurrentSpec();
 
 		FeatureInfo getCurrentFeature();
 

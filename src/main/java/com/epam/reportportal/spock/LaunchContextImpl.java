@@ -43,32 +43,35 @@ import com.google.common.collect.Lists;
  */
 class LaunchContextImpl extends AbstractLaunchContext {
 
-	private final RuntimePointer pointer = new RuntimePointer();
-	private final Map<String, Specification> specsRegistry = new ConcurrentHashMap<String, Specification>();
+	private final Map<String, Specification> specFootprintsRegistry = new ConcurrentHashMap<String, Specification>();
+	private final Map<String, RuntimePointer> runtimePointersRegistry = new ConcurrentHashMap<String, RuntimePointer>();
 
 	@Override
 	public void addRunningSpec(String id, SpecInfo specInfo) {
 		Specification specification = new Specification(specInfo, id);
-		pointer.setSpecInfo(specInfo);
-		specsRegistry.put(getSpecIdentifier(specInfo), specification);
+		String specIdentifier = getSpecIdentifier(specInfo);
+		runtimePointersRegistry.put(specIdentifier, new RuntimePointer());
+		specFootprintsRegistry.put(specIdentifier, specification);
 	}
 
 	@Override
 	public void addRunningFeature(FeatureInfo featureInfo) {
+		SpecInfo specInfo = featureInfo.getSpec();
 		Specification specification = findSpecFootprint(featureInfo.getSpec());
 		if (specification != null) {
-			pointer.setFeatureInfo(featureInfo);
+			getRuntimePointerForSpec(specInfo).setFeatureInfo(featureInfo);
 			specification.addRunningFeature(featureInfo);
 		}
 	}
 
 	@Override
 	public void addRunningIteration(String id, IterationInfo iterationInfo) {
-		Specification specification = findSpecFootprint(iterationInfo.getFeature().getSpec());
+		SpecInfo specInfo = iterationInfo.getFeature().getSpec();
+		Specification specification = findSpecFootprint(specInfo);
 		if (specification != null) {
 			Feature feature = specification.getFeature(iterationInfo.getFeature());
 			if (feature != null) {
-				pointer.setIterationInfo(iterationInfo);
+				getRuntimePointerForSpec(specInfo).setIterationInfo(iterationInfo);
 				feature.addIteration(iterationInfo, id);
 			}
 		}
@@ -97,23 +100,27 @@ class LaunchContextImpl extends AbstractLaunchContext {
 
 	@Override
 	public Specification findSpecFootprint(final SpecInfo specInfo) {
-		Specification footprint = null;
-		SpecInfo specToFind = specInfo;
-		while (footprint == null && specToFind != null) {
-			footprint = specsRegistry.get(getSpecIdentifier(specToFind));
-			specToFind = specToFind.getSubSpec();
-		}
-		return footprint;
+		return findValueInRegistry(specFootprintsRegistry, specInfo);
 	}
 
 	@Override
 	public Iterable<Specification> findAllUnpublishedSpecFootprints() {
-		return filter(specsRegistry.values(), IS_NOT_PUBLISHED);
+		return filter(specFootprintsRegistry.values(), IS_NOT_PUBLISHED);
 	}
 
 	@Override
-	public IRuntimePointer getRuntimePointer() {
-		return pointer;
+	public RuntimePointer getRuntimePointerForSpec(SpecInfo specInfo) {
+		return findValueInRegistry(runtimePointersRegistry, specInfo);
+	}
+
+	private <T> T findValueInRegistry(Map<String, T> registry, SpecInfo specInfo) {
+		T value = null;
+		SpecInfo specToFind = specInfo;
+		while (value == null && specToFind != null) {
+			value = registry.get(getSpecIdentifier(specToFind));
+			specToFind = specToFind.getSubSpec();
+		}
+		return value;
 	}
 
 	private static class Specification extends NodeFootprint<SpecInfo> {
@@ -195,13 +202,8 @@ class LaunchContextImpl extends AbstractLaunchContext {
 
 	private static class RuntimePointer implements IRuntimePointer {
 
-		private SpecInfo specInfo;
 		private FeatureInfo featureInfo;
 		private IterationInfo iterationInfo;
-
-		private void setSpecInfo(SpecInfo specInfo) {
-			this.specInfo = specInfo;
-		}
 
 		private void setFeatureInfo(FeatureInfo featureInfo) {
 			this.featureInfo = featureInfo;
@@ -209,11 +211,6 @@ class LaunchContextImpl extends AbstractLaunchContext {
 
 		private void setIterationInfo(IterationInfo iterationInfo) {
 			this.iterationInfo = iterationInfo;
-		}
-
-		@Override
-		public SpecInfo getCurrentSpec() {
-			return specInfo;
 		}
 
 		@Override

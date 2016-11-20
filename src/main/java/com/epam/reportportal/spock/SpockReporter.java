@@ -91,13 +91,15 @@ class SpockReporter implements ISpockReporter {
 
 	@Override
 	public void startLaunch() {
-		StartLaunchRQ startLaunchRQ = createStartLaunchRQ();
-		try {
-			EntryCreatedRS response = reportPortalService.startLaunch(startLaunchRQ);
-			launchContext.setLaunchId(response.getId());
-		} catch (RestEndpointIOException exception) {
-			String errorMessage = "Unable start the launch: '" + launchName + "'";
-			ListenersUtils.handleException(exception, LOGGER, errorMessage);
+		if (launchContext.tryStartLaunch()) {
+			StartLaunchRQ startLaunchRQ = createStartLaunchRQ();
+			try {
+				EntryCreatedRS response = reportPortalService.startLaunch(startLaunchRQ);
+				launchContext.setLaunchId(response.getId());
+			} catch (RestEndpointIOException exception) {
+				String errorMessage = "Unable start the launch: '" + launchName + "'";
+				ListenersUtils.handleException(exception, LOGGER, errorMessage);
+			}
 		}
 	}
 
@@ -114,7 +116,8 @@ class SpockReporter implements ISpockReporter {
 			if (kind.isSpecScopedFixtureMethod()) {
 				fixtureOwnerFootprint = specFootprint;
 			} else {
-				IterationInfo currentIteration = launchContext.getRuntimePointer().getCurrentIteration();
+				SpecInfo sourceSpec = fixture.getParent();
+				IterationInfo currentIteration = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentIteration();
 				fixtureOwnerFootprint = launchContext.findIterationFootprint(currentIteration);
 			}
 			fixtureOwnerFootprint.addFixtureFootprint(new FixtureFootprint(fixture, rs.getId()));
@@ -182,7 +185,8 @@ class SpockReporter implements ISpockReporter {
 		if (kind.isSpecScopedFixtureMethod()) {
 			ownerFootprint = launchContext.findSpecFootprint(fixture.getParent());
 		} else {
-			IterationInfo currentIteration = launchContext.getRuntimePointer().getCurrentIteration();
+			SpecInfo sourceSpec = fixture.getParent();
+			IterationInfo currentIteration = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentIteration();
 			ownerFootprint = launchContext.findIterationFootprint(currentIteration);
 		}
 		ReportableItemFootprint fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(fixture);
@@ -221,15 +225,15 @@ class SpockReporter implements ISpockReporter {
 	@Override
 	public void reportError(ErrorInfo error) {
 		MethodInfo errorSource = error.getMethod();
+		SpecInfo sourceSpec = errorSource.getParent();
 		MethodKind errorSourceKind = errorSource.getKind();
 		ReportableItemFootprint errorSourceFootprint = null;
 
 		if (FEATURE.equals(errorSourceKind)) {
-			IterationInfo iterationInfo = launchContext.getRuntimePointer().getCurrentIteration();
+			IterationInfo iterationInfo = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentIteration();
 			errorSourceFootprint = launchContext.findIterationFootprint(iterationInfo);
 
 		} else if (SHARED_INITIALIZER.equals(errorSourceKind)) {
-			SpecInfo sourceSpec = errorSource.getParent();
 			/*
 			 * Explicitly register specification here, because in the case of
 			 * shared initializer error appropriate listener method isn't
@@ -239,7 +243,7 @@ class SpockReporter implements ISpockReporter {
 			errorSourceFootprint = launchContext.findSpecFootprint(sourceSpec);
 
 		} else if (DATA_PROCESSOR.equals(errorSourceKind) || INITIALIZER.equals(errorSourceKind)) {
-			FeatureInfo featureInfo = launchContext.getRuntimePointer().getCurrentFeature();
+			FeatureInfo featureInfo = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentFeature();
 			IterationInfo maskedIteration = buildIterationMaskForFeature(featureInfo);
 			registerIteration(maskedIteration);
 			errorSourceFootprint = launchContext.findIterationFootprint(maskedIteration);
@@ -249,7 +253,7 @@ class SpockReporter implements ISpockReporter {
 			errorSourceFootprint = originalSpecFootprint.findFixtureFootprint(errorSource);
 
 		} else if (errorSourceKind.isFeatureScopedFixtureMethod()) {
-			IterationInfo runningIteration = launchContext.getRuntimePointer().getCurrentIteration();
+			IterationInfo runningIteration = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentIteration();
 			NodeFootprint originalIterationFootprint = launchContext.findIterationFootprint(runningIteration);
 			errorSourceFootprint = originalIterationFootprint.findFixtureFootprint(errorSource);
 		} else {
@@ -264,17 +268,19 @@ class SpockReporter implements ISpockReporter {
 
 	@Override
 	public void finishLaunch() {
-		// publish all registered unpublished specifications first
-		for (NodeFootprint<SpecInfo> footprint : launchContext.findAllUnpublishedSpecFootprints()) {
-			reportTestItemFinish(footprint);
-		}
-		// finish launch
-		FinishExecutionRQ rq = createFinishExecutionRQ();
-		try {
-			reportPortalService.finishLaunch(launchContext.getLaunchId(), rq);
-		} catch (RestEndpointIOException exception) {
-			String errorMessage = "Unable finish the launch: '" + launchContext.getLaunchId() + "'";
-			ListenersUtils.handleException(exception, LOGGER, errorMessage);
+		if (launchContext.tryFinishLaunch()) {
+			// publish all registered unpublished specifications first
+			for (NodeFootprint<SpecInfo> footprint : launchContext.findAllUnpublishedSpecFootprints()) {
+				reportTestItemFinish(footprint);
+			}
+			// finish launch
+			FinishExecutionRQ rq = createFinishExecutionRQ();
+			try {
+				reportPortalService.finishLaunch(launchContext.getLaunchId(), rq);
+			} catch (RestEndpointIOException exception) {
+				String errorMessage = "Unable finish the launch: '" + launchContext.getLaunchId() + "'";
+				ListenersUtils.handleException(exception, LOGGER, errorMessage);
+			}
 		}
 	}
 
@@ -324,17 +330,6 @@ class SpockReporter implements ISpockReporter {
 		}
 	}
 
-	private static String calculateFootprintStatus(ReportableItemFootprint<?> footprint) {
-		Optional<String> footprintStatus = footprint.getStatus();
-		if (footprintStatus.isPresent()) {
-			return footprintStatus.get();
-		}
-		// don't set status explicitly for footprints with descendants:
-		// delegate status calculation to RP
-		return footprint.hasDescendants() ? null : Statuses.PASSED;
-
-	}
-
 	private IterationInfo buildIterationMaskForFeature(FeatureInfo featureInfo) {
 		IterationInfo iterationInfo = new IterationInfo(featureInfo, null, 0);
 		iterationInfo.setName(featureInfo.getName());
@@ -368,7 +363,19 @@ class SpockReporter implements ISpockReporter {
 		return rq;
 	}
 
+	private static String calculateFootprintStatus(ReportableItemFootprint<?> footprint) {
+		Optional<String> footprintStatus = footprint.getStatus();
+		if (footprintStatus.isPresent()) {
+			return footprintStatus.get();
+		}
+		// don't set status explicitly for footprints with descendants:
+		// delegate status calculation to RP
+		return footprint.hasDescendants() ? null : Statuses.PASSED;
+
+	}
+
 	private static boolean isMonolithicParametrizedFeature(FeatureInfo feature) {
 		return feature.isParameterized() && !feature.isReportIterations();
 	}
+
 }

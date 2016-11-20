@@ -25,6 +25,10 @@ tasks.withType(JavaCompile) {
   options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
 }
 
+javadoc {
+  options.memberLevel = JavadocMemberLevel.PACKAGE
+}
+
 task wrapper(type: Wrapper) {
   gradleVersion = '3.0'
 }
