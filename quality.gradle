@@ -2,7 +2,8 @@ apply plugin: 'findbugs'
 
 findbugs {
   sourceSets = [sourceSets.main]
-  reportLevel = "low"
+  ignoreFailures = true
+  effort = 'max'
 }
 tasks.withType(FindBugs) {
   reports {

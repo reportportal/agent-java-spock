@@ -1,6 +1,10 @@
-group 'com.epam.reportportal'
+plugins {
+  id 'net.researchgate.release' version '2.4.1'
+  id "com.jfrog.bintray" version "1.7"
+}
 
 apply plugin: 'java'
+apply from: 'release.gradle'
 apply from: 'quality.gradle'
 
 sourceCompatibility = 1.6
@@ -15,6 +19,10 @@ repositories {
 dependencies {
   compile 'com.epam.reportportal:client-java-core:2.5.1'
   compileOnly 'org.spockframework:spock-core:1.0-groovy-2.0'
+}
+
+tasks.withType(JavaCompile) {
+  options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
 }
 
 task wrapper(type: Wrapper) {
