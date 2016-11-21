@@ -25,6 +25,7 @@ import static com.epam.reportportal.listeners.Statuses.SKIPPED;
 import static com.epam.reportportal.spock.NodeInfoUtils.buildFeatureDescription;
 import static com.epam.reportportal.spock.NodeInfoUtils.getFixtureDisplayName;
 import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISHED;
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Iterables.filter;
 import static com.google.common.collect.Iterables.getFirst;
 import static org.spockframework.runtime.model.MethodKind.*;
@@ -83,7 +84,11 @@ class SpockReporter implements ISpockReporter {
 	private final AbstractLaunchContext launchContext;
 
 	@Inject
-	public SpockReporter(IReportPortalService reportPortalService, ListenerParameters parameters, AbstractLaunchContext launchContext) {
+	SpockReporter(IReportPortalService reportPortalService, ListenerParameters parameters, AbstractLaunchContext launchContext) {
+		checkArgument(reportPortalService != null, "Report portal service should't be null");
+		checkArgument(parameters != null, "Listener parameters shouldn't be null");
+		checkArgument(launchContext != null, "Null launch context is passed");
+
 		this.reportPortalService = reportPortalService;
 		this.launchName = parameters.getLaunchName();
 		this.launchDescription = parameters.getDescription();
@@ -157,13 +162,10 @@ class SpockReporter implements ISpockReporter {
 
 	@Override
 	public void registerIteration(IterationInfo iteration) {
-		if (rpIsDown.get()) {
+		if (rpIsDown.get() || isMonolithicParametrizedFeature(iteration.getFeature())) {
 			return;
 		}
-
-		if (!isMonolithicParametrizedFeature(iteration.getFeature())) {
-			reportIterationStart(iteration);
-		}
+		reportIterationStart(iteration);
 	}
 
 	@Override
@@ -285,7 +287,7 @@ class SpockReporter implements ISpockReporter {
 			LOGGER.warn("Unable to handle error of type {}", errorSourceKind);
 		}
 
-		if (errorSourceFootprint != null && !errorSourceFootprint.isPublished()) {
+		if (IS_NOT_PUBLISHED.apply(errorSourceFootprint)) {
 			errorSourceFootprint.setStatus(FAILED);
 			reportTestItemFailure(errorSourceFootprint, error);
 		}

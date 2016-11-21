@@ -36,8 +36,9 @@ class FixtureInterceptor implements IMethodInterceptor {
 
 	private final ISpockReporter spockReporter;
 
-	public FixtureInterceptor(ISpockReporter spockReporter) {
+	FixtureInterceptor(ISpockReporter spockReporter) {
 		checkArgument(spockReporter != null);
+
 		this.spockReporter = spockReporter;
 	}
 

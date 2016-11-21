@@ -42,6 +42,8 @@ class ReportableRunListener extends AbstractRunListener {
 	@Inject
 	public ReportableRunListener(ISpockReporter spockReporter, IMethodInterceptor fixturesInterceptor) {
 		checkArgument(spockReporter != null, "Spock reporter shouldn't be null");
+		checkArgument(fixturesInterceptor != null, "Fixture interceptor shouldn't be null");
+
 		this.spockReporter = spockReporter;
 		this.fixturesInterceptor = fixturesInterceptor;
 	}

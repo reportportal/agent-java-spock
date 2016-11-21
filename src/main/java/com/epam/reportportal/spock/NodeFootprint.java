@@ -56,9 +56,6 @@ abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFootprint
 		fixtures = newArrayListWithCapacity(APPROXIMATE_CAPACITY);
 	}
 
-	List<ReportableItemFootprint<MethodInfo>> getFixtures() {
-		return newArrayList(fixtures);
-	}
 
 	ReportableItemFootprint<MethodInfo> findFixtureFootprint(final MethodInfo fixture) {
 		Predicate<ReportableItemFootprint<MethodInfo>> criteria = createFixtureMatchPredicate(fixture);
@@ -81,7 +78,11 @@ abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFootprint
 		fixtures.add(footprint);
 	}
 
-	private Predicate<ReportableItemFootprint<MethodInfo>> createFixtureMatchPredicate(final MethodInfo fixture) {
+	private List<ReportableItemFootprint<MethodInfo>> getFixtures() {
+		return newArrayList(fixtures);
+	}
+
+	private static Predicate<ReportableItemFootprint<MethodInfo>> createFixtureMatchPredicate(final MethodInfo fixture) {
 		return new Predicate<ReportableItemFootprint<MethodInfo>>() {
 			@Override
 			public boolean apply(@Nullable ReportableItemFootprint<MethodInfo> footprint) {
