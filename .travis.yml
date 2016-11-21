@@ -1,0 +1,17 @@
+language: java
+
+before_install:
+   - chmod +x gradlew
+
+script: ./gradlew build --stacktrace
+
+jdk:
+  - oraclejdk8
+
+notifications:
+  slack: reportportal-dev:fl6xWHVQp1jvsMmCJxYW9YKP
+
+cache:
+  directories:
+  - $HOME/.m2
+  - $HOME/.gradle
