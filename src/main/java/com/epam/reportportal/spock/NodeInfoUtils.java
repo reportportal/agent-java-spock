@@ -30,6 +30,7 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.spockframework.runtime.model.*;
 
 import com.google.common.base.Predicate;
@@ -44,7 +45,8 @@ import com.google.common.collect.Maps;
  */
 class NodeInfoUtils {
 
-	private static final String INHERITED_FIXTURE_NAME_TEMPLATE = "%s#%s";
+	@VisibleForTesting
+	static final String INHERITED_FIXTURE_NAME_TEMPLATE = "%s#%s";
 	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
 	private static final String BLOCK_SPLITTER = ": ";
 	private static final String CONJUNCTION_KEYWORD = "And";
@@ -86,12 +88,15 @@ class NodeInfoUtils {
 		Iterator<BlockInfo> blocksIterator = featureInfo.getBlocks().iterator();
 		while (blocksIterator.hasNext()) {
 			BlockInfo block = blocksIterator.next();
+			boolean isLast = !blocksIterator.hasNext();
 			if (!SKIP_BLOCK_CONDITION.apply(block)) {
 				appendBlockInfo(description, block);
-				boolean notLast = blocksIterator.hasNext();
-				if (notLast) {
+				if (!isLast) {
 					description.append(LINE_SEPARATOR);
 				}
+			} else if(isLast && description.length() > 0) {
+				int lastLineSeparatorIndex = description.lastIndexOf(LINE_SEPARATOR);
+				description.delete(lastLineSeparatorIndex, description.length());
 			}
 		}
 		return description.toString();
@@ -105,12 +110,15 @@ class NodeInfoUtils {
      * @return display name
      */
 	static String getFixtureDisplayName(MethodInfo methodInfo, boolean inherited) {
-		String fixtureName = methodInfo.getName();
-		if (inherited) {
-			String sourceSpecName = methodInfo.getParent().getReflection().getSimpleName();
-			return format(INHERITED_FIXTURE_NAME_TEMPLATE, sourceSpecName, fixtureName);
+		if(methodInfo != null) {
+			String fixtureName = methodInfo.getName();
+			if (inherited) {
+				String sourceSpecName = methodInfo.getParent().getReflection().getSimpleName();
+				return format(INHERITED_FIXTURE_NAME_TEMPLATE, sourceSpecName, fixtureName);
+			}
+			return fixtureName;
 		}
-		return fixtureName;
+		return "";
 	}
 
 	/**
@@ -152,10 +160,7 @@ class NodeInfoUtils {
 			// iterate over characters excluding the first one
 			for (int i = 1; i < initialChars.length; i++) {
 				char ch = initialChars[i];
-				if (Character.isUpperCase(ch)) {
-					ch = Character.toLowerCase(ch);
-				}
-				buffer[i] = ch;
+				buffer[i] = Character.toLowerCase(ch);
 			}
 			String blockName = new String(buffer);
 			BLOCK_NAMES.put(blockKind, blockName);

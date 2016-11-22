@@ -19,6 +19,13 @@ repositories {
 dependencies {
   compile 'com.epam.reportportal:client-java-core:2.5.1'
   compileOnly 'org.spockframework:spock-core:1.0-groovy-2.0'
+
+  testCompile 'org.hamcrest:hamcrest-all:1.3'
+  testCompile 'junit:junit:4.12'
+  testCompile 'org.spockframework:spock-core:1.0-groovy-2.0'
+  testCompile 'org.mockito:mockito-all:2.0.2-beta'
+  testCompile 'pl.pragmatists:JUnitParams:1.0.4'
+  testCompile 'org.apache.commons:commons-lang3:3.5'
 }
 
 tasks.withType(JavaCompile) {
