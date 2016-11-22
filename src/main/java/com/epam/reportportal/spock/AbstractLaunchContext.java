@@ -23,6 +23,8 @@ package com.epam.reportportal.spock;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import javax.annotation.Nullable;
 
 import org.spockframework.runtime.model.FeatureInfo;
@@ -30,14 +32,15 @@ import org.spockframework.runtime.model.IterationInfo;
 import org.spockframework.runtime.model.SpecInfo;
 
 /**
- * Context which stores and provides the reporting meta data during the test launch
+ * Context which stores and provides the reporting meta data during the test
+ * launch
  *
  * @author Dzmitry Mikhievich
  */
 abstract class AbstractLaunchContext {
 
-	private Boolean launchInProgress;
 	private String launchId;
+	private AtomicReference<Boolean> launchInProgress = new AtomicReference<Boolean>();
 
 	@Nullable
 	String getLaunchId() {
@@ -52,24 +55,16 @@ abstract class AbstractLaunchContext {
 	 * @return true if launch status hadn't been started previously, false
 	 *         otherwise
 	 */
-	synchronized boolean tryStartLaunch() {
-		if (launchInProgress == null) {
-			this.launchInProgress = TRUE;
-			return true;
-		}
-		return false;
+	boolean tryStartLaunch() {
+		return launchInProgress.compareAndSet(null, TRUE);
 	}
 
 	/**
 	 * @return true if launch status hadn't been started previously, false
 	 *         otherwise
 	 */
-	synchronized boolean tryFinishLaunch() {
-		if (TRUE.equals(launchInProgress)) {
-			this.launchInProgress = FALSE;
-			return true;
-		}
-		return false;
+	boolean tryFinishLaunch() {
+		return launchInProgress.compareAndSet(TRUE, FALSE);
 	}
 
 	boolean isSpecRegistered(SpecInfo specInfo) {
