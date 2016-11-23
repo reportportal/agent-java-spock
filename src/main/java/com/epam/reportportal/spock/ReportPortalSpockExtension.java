@@ -34,10 +34,10 @@ import com.epam.reportportal.guice.Injector;
  */
 public class ReportPortalSpockExtension implements IGlobalExtension {
 
-	private static final Injector injector = Injector.getInstance().getChildInjector(new SpockListenersModule());
+	private static final Injector INJECTOR = Injector.getInstance().getChildInjector(new SpockListenersModule());
 
-	private final ISpockReporter spockReporter = injector.getBean(ISpockReporter.class);
-	private final IRunListener reportingRunListener = injector.getBean(IRunListener.class);
+	private final ISpockReporter spockReporter = INJECTOR.getBean(ISpockReporter.class);
+	private final IRunListener reportingRunListener = INJECTOR.getBean(IRunListener.class);
 
 	@Override
 	public void start() {

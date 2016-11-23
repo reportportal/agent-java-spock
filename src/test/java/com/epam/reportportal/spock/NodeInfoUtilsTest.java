@@ -50,8 +50,7 @@ public class NodeInfoUtilsTest {
 		Iterator<String> generatedTextsIterator = generatedTexts.iterator();
 
 		List<BlockInfo> blocks = asList(createBlockInfo(EXPECT, singletonList(generatedTextsIterator.next())),
-				createBlockInfo(WHERE, singletonList((String) null)),
-				createBlockInfo(WHERE, singletonList("")));
+				createBlockInfo(WHERE, singletonList((String) null)), createBlockInfo(WHERE, singletonList("")));
 
 		String expectedDescription = String.format("Expect: %s", generatedTexts.toArray());
 
@@ -63,18 +62,19 @@ public class NodeInfoUtilsTest {
 	}
 
 	private Object featureDescription_singleTextInBlock() {
-		 int expectedTextBlocksCount = 6;
-		 Collection<String> generatedTexts = generateBlockTexts(expectedTextBlocksCount);
-		 Iterator<String> generatedTextsIterator = generatedTexts.iterator();
+		int expectedTextBlocksCount = 6;
+		Collection<String> generatedTexts = generateBlockTexts(expectedTextBlocksCount);
+		Iterator<String> generatedTextsIterator = generatedTexts.iterator();
 
-		 List<BlockInfo> blocks = asList(createBlockInfo(SETUP, singletonList(generatedTextsIterator.next())),
-		 createBlockInfo(WHEN, singletonList(generatedTextsIterator.next())),
-		 createBlockInfo(THEN, singletonList(generatedTextsIterator.next())),
-		 createBlockInfo(EXPECT, singletonList(generatedTextsIterator.next())),
-		 createBlockInfo(CLEANUP, singletonList(generatedTextsIterator.next())),
-		 createBlockInfo(WHERE, singletonList(generatedTextsIterator.next())));
+		List<BlockInfo> blocks = asList(createBlockInfo(SETUP, singletonList(generatedTextsIterator.next())),
+				createBlockInfo(WHEN, singletonList(generatedTextsIterator.next())),
+				createBlockInfo(THEN, singletonList(generatedTextsIterator.next())),
+				createBlockInfo(EXPECT, singletonList(generatedTextsIterator.next())),
+				createBlockInfo(CLEANUP, singletonList(generatedTextsIterator.next())),
+				createBlockInfo(WHERE, singletonList(generatedTextsIterator.next())));
 
-		 String expectedDescription = String.format("Setup: %s%nWhen: %s%nThen: %s%nExpect: %s%nCleanup: %s%nWhere: %s", generatedTexts.toArray());
+		String expectedDescription = String.format("Setup: %s%nWhen: %s%nThen: %s%nExpect: %s%nCleanup: %s%nWhere: %s",
+				generatedTexts.toArray());
 
 		return new Object[] { "single text in block", createFeatureInfo(blocks), expectedDescription };
 	}
@@ -89,7 +89,6 @@ public class NodeInfoUtilsTest {
 
 		return new Object[] { "several texts in the single block", createFeatureInfo(blocks), expectedDescription };
 	}
-
 
 	@Test
 	@TestCaseName("{method}(inherited={1})")
@@ -152,7 +151,7 @@ public class NodeInfoUtilsTest {
 
 	private static FeatureInfo createFeatureInfo(@Nullable Collection<BlockInfo> blocks) {
 		FeatureInfo featureInfo = new FeatureInfo();
-		if(blocks != null) {
+		if (blocks != null) {
 			featureInfo.getBlocks().addAll(blocks);
 		}
 		return featureInfo;
