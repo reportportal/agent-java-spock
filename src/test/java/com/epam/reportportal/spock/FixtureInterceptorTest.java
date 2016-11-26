@@ -15,7 +15,7 @@ import org.spockframework.runtime.model.ErrorInfo;
 import org.spockframework.runtime.model.MethodInfo;
 
 /**
- * Created by Dzmitry_Mikhievich
+ * @author Dzmitry Mikhievich
  */
 @RunWith(MockitoJUnitRunner.class)
 public class FixtureInterceptorTest {

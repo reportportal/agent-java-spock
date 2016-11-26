@@ -17,7 +17,7 @@ import org.spockframework.runtime.extension.IMethodInterceptor;
 import org.spockframework.runtime.model.*;
 
 /**
- * Created by Dzmitry_Mikhievich
+ * @author Dzmitry Mikhievich
  */
 @RunWith(MockitoJUnitRunner.class)
 public class ReportableRunListenerTest {

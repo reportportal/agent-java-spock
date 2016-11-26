@@ -32,11 +32,11 @@ import static org.spockframework.runtime.model.MethodKind.*;
 
 import java.util.Calendar;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spockframework.runtime.model.*;
@@ -52,15 +52,15 @@ import com.epam.ta.reportportal.ws.model.EntryCreatedRS;
 import com.epam.ta.reportportal.ws.model.FinishExecutionRQ;
 import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
-import com.epam.ta.reportportal.ws.model.launch.Mode;
 import com.epam.ta.reportportal.ws.model.launch.StartLaunchRQ;
 import com.epam.ta.reportportal.ws.model.log.SaveLogRQ;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 /**
- * Default implementation of {@link ISpockReporter}, which posts test results to the RP using the
- * {@link com.epam.reportportal.service.IReportPortalService} instance
+ * Default implementation of {@link ISpockReporter}, which posts test results to
+ * the RP using the {@link com.epam.reportportal.service.IReportPortalService}
+ * instance
  *
  * @author Dzmitry Mikhievich
  */
@@ -68,7 +68,7 @@ class SpockReporter implements ISpockReporter {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(SpockReporter.class);
 
-	//stores the bindings of Spock method kinds to the RP-specific notation
+	// stores the bindings of Spock method kinds to the RP-specific notation
 	private static final Map<MethodKind, String> ITEM_TYPES_REGISTRY = ImmutableMap.<MethodKind, String> builder()
 			.put(SPEC_EXECUTION, "TEST").put(SETUP_SPEC, "BEFORE_CLASS").put(SETUP, "BEFORE_METHOD").put(FEATURE, "STEP")
 			.put(CLEANUP, "AFTER_METHOD").put(CLEANUP_SPEC, "AFTER_CLASS").build();
@@ -76,11 +76,7 @@ class SpockReporter implements ISpockReporter {
 	private final AtomicBoolean rpIsDown = new AtomicBoolean(false);
 
 	private final IReportPortalService reportPortalService;
-
-	private final Set<String> launchTags;
-	private final String launchName;
-	private final String launchDescription;
-	private final Mode launchRunningMode;
+	private final ListenerParameters launchParameters;
 	private final AbstractLaunchContext launchContext;
 
 	@Inject
@@ -90,10 +86,7 @@ class SpockReporter implements ISpockReporter {
 		checkArgument(launchContext != null, "Null launch context is passed");
 
 		this.reportPortalService = reportPortalService;
-		this.launchName = parameters.getLaunchName();
-		this.launchDescription = parameters.getDescription();
-		this.launchTags = parameters.getTags();
-		this.launchRunningMode = parameters.getMode();
+		this.launchParameters = parameters;
 		this.launchContext = launchContext;
 	}
 
@@ -105,7 +98,7 @@ class SpockReporter implements ISpockReporter {
 				EntryCreatedRS response = reportPortalService.startLaunch(startLaunchRQ);
 				launchContext.setLaunchId(response.getId());
 			} catch (RestEndpointIOException ex) {
-				handleRpException(ex, "Unable start the launch: '" + launchName + "'");
+				handleRpException(ex, "Unable start the launch: '" + launchParameters.getLaunchName() + "'");
 			}
 		}
 	}
@@ -263,8 +256,9 @@ class SpockReporter implements ISpockReporter {
 
 		} else if (SHARED_INITIALIZER.equals(errorSourceKind)) {
 			/*
-			 * Explicitly register specification here, because in the case of shared initializer
-			 * error appropriate listener method isn't triggered
+			 * Explicitly register specification here, because in the case of
+			 * shared initializer error appropriate listener method isn't
+			 * triggered
 			 */
 			registerSpec(sourceSpec);
 			errorSourceFootprint = launchContext.findSpecFootprint(sourceSpec);
@@ -305,19 +299,19 @@ class SpockReporter implements ISpockReporter {
 			try {
 				reportPortalService.finishLaunch(launchContext.getLaunchId(), rq);
 			} catch (RestEndpointIOException ex) {
-				handleRpException(ex,"Unable finish the launch: '" + launchContext.getLaunchId() + "'");
+				handleRpException(ex, "Unable finish the launch: '" + launchContext.getLaunchId() + "'");
 			}
 		}
 	}
 
-	private void reportIterationStart(IterationInfo iteration) {
+	@VisibleForTesting
+	void reportIterationStart(IterationInfo iteration) {
 		FeatureInfo feature = iteration.getFeature();
 		StartTestItemRQ rq = createBaseStartTestItemRQ(iteration.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
 		rq.setDescription(buildFeatureDescription(feature));
-		ReportableItemFootprint spec = launchContext.findSpecFootprint(feature.getSpec());
-		String specId = spec != null ? spec.getId() : null;
+		ReportableItemFootprint specFootprint = launchContext.findSpecFootprint(feature.getSpec());
 		try {
-			EntryCreatedRS rs = reportPortalService.startTestItem(specId, rq);
+			EntryCreatedRS rs = reportPortalService.startTestItem(specFootprint.getId(), rq);
 			launchContext.addRunningIteration(rs.getId(), iteration);
 			ReportPortalListenerContext.setRunningNowItemId(rs.getId());
 		} catch (RestEndpointIOException ex) {
@@ -325,7 +319,8 @@ class SpockReporter implements ISpockReporter {
 		}
 	}
 
-	private void reportTestItemFinish(ReportableItemFootprint<?> footprint) {
+	@VisibleForTesting
+	void reportTestItemFinish(ReportableItemFootprint<?> footprint) {
 		FinishTestItemRQ rq = new FinishTestItemRQ();
 		rq.setEndTime(Calendar.getInstance().getTime());
 		rq.setStatus(calculateFootprintStatus(footprint));
@@ -341,7 +336,8 @@ class SpockReporter implements ISpockReporter {
 		}
 	}
 
-	private void reportTestItemFailure(ReportableItemFootprint testItemFootprint, ErrorInfo errorInfo) {
+	@VisibleForTesting
+	void reportTestItemFailure(ReportableItemFootprint testItemFootprint, ErrorInfo errorInfo) {
 		SaveLogRQ saveLogRQ = new SaveLogRQ();
 		saveLogRQ.setLogTime(Calendar.getInstance().getTime());
 		saveLogRQ.setTestItemId(testItemFootprint.getId());
@@ -351,6 +347,24 @@ class SpockReporter implements ISpockReporter {
 			reportPortalService.log(saveLogRQ);
 		} catch (RestEndpointIOException ex) {
 			handleRpException(ex, "Unable to send message to Report Portal");
+		}
+	}
+
+	@VisibleForTesting
+	void handleRpException(RestEndpointIOException rpException, String message) {
+		rpIsDown.set(true);
+		ListenersUtils.handleException(rpException, LOGGER, message);
+	}
+
+	@VisibleForTesting
+	NodeFootprint findFixtureOwner(MethodInfo fixture) {
+		MethodKind kind = fixture.getKind();
+		SpecInfo sourceSpec = fixture.getParent();
+		if (kind.isSpecScopedFixtureMethod()) {
+			return launchContext.findSpecFootprint(sourceSpec);
+		} else {
+			IterationInfo currentIteration = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentIteration();
+			return launchContext.findIterationFootprint(currentIteration);
 		}
 	}
 
@@ -369,11 +383,11 @@ class SpockReporter implements ISpockReporter {
 
 	private StartLaunchRQ createStartLaunchRQ() {
 		StartLaunchRQ startLaunchRQ = new StartLaunchRQ();
-		startLaunchRQ.setName(launchName);
-		startLaunchRQ.setDescription(launchDescription);
+		startLaunchRQ.setName(launchParameters.getLaunchName());
+		startLaunchRQ.setDescription(launchParameters.getDescription());
 		startLaunchRQ.setStartTime(Calendar.getInstance().getTime());
-		startLaunchRQ.setTags(launchTags);
-		startLaunchRQ.setMode(launchRunningMode);
+		startLaunchRQ.setTags(launchParameters.getTags());
+		startLaunchRQ.setMode(launchParameters.getMode());
 
 		return startLaunchRQ;
 	}
@@ -387,23 +401,9 @@ class SpockReporter implements ISpockReporter {
 		return rq;
 	}
 
-	private void handleRpException(RestEndpointIOException rpException, String message) {
-		rpIsDown.set(true);
-		ListenersUtils.handleException(rpException, LOGGER, message);
-	}
 
-	private NodeFootprint findFixtureOwner(MethodInfo fixture) {
-		MethodKind kind = fixture.getKind();
-		if (kind.isSpecScopedFixtureMethod()) {
-			return launchContext.findSpecFootprint(fixture.getParent());
-		} else {
-			SpecInfo sourceSpec = fixture.getParent();
-			IterationInfo currentIteration = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentIteration();
-			return launchContext.findIterationFootprint(currentIteration);
-		}
-	}
-
-	private static String calculateFootprintStatus(ReportableItemFootprint<?> footprint) {
+	@VisibleForTesting
+	static String calculateFootprintStatus(ReportableItemFootprint<?> footprint) {
 		Optional<String> footprintStatus = footprint.getStatus();
 		if (footprintStatus.isPresent()) {
 			return footprintStatus.get();
@@ -414,7 +414,8 @@ class SpockReporter implements ISpockReporter {
 
 	}
 
-	private static boolean isMonolithicParametrizedFeature(FeatureInfo feature) {
+	@VisibleForTesting
+	static boolean isMonolithicParametrizedFeature(FeatureInfo feature) {
 		return feature.isParameterized() && !feature.isReportIterations();
 	}
 

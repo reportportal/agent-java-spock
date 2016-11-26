@@ -43,7 +43,7 @@ import com.google.common.collect.Maps;
  *
  * @author Dzmitry Mikhievich
  */
-class NodeInfoUtils {
+final class NodeInfoUtils {
 
 	@VisibleForTesting
 	static final String INHERITED_FIXTURE_NAME_TEMPLATE = "%s#%s";
