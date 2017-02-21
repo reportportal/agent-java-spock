@@ -36,15 +36,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spockframework.runtime.model.*;
+import org.spockframework.runtime.model.MethodKind;
 import org.spockframework.util.ExceptionUtil;
 
 import com.epam.reportportal.listeners.ListenerParameters;
 import com.epam.reportportal.listeners.ListenersUtils;
-import com.epam.reportportal.listeners.ReportPortalListenerContext;
 import com.epam.reportportal.listeners.Statuses;
 import com.epam.reportportal.restclient.endpoint.exception.RestEndpointIOException;
 import com.epam.reportportal.service.IReportPortalService;
@@ -54,6 +53,7 @@ import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import com.epam.ta.reportportal.ws.model.launch.StartLaunchRQ;
 import com.epam.ta.reportportal.ws.model.log.SaveLogRQ;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
@@ -118,7 +118,7 @@ class SpockReporter implements ISpockReporter {
 			EntryCreatedRS rs = reportPortalService.startTestItem(specFootprint.getId(), rq);
 			NodeFootprint fixtureOwnerFootprint = findFixtureOwner(fixture);
 			fixtureOwnerFootprint.addFixtureFootprint(new FixtureFootprint(fixture, rs.getId()));
-			ReportPortalListenerContext.setRunningNowItemId(rs.getId());
+			DisorderedListenerContextDelegate.setRunningNowItemId(rs.getId());
 		} catch (RestEndpointIOException ex) {
 			handleRpException(ex, "Unable to start '" + fixtureDisplayName + "' fixture");
 		}
@@ -313,7 +313,7 @@ class SpockReporter implements ISpockReporter {
 		try {
 			EntryCreatedRS rs = reportPortalService.startTestItem(specFootprint.getId(), rq);
 			launchContext.addRunningIteration(rs.getId(), iteration);
-			ReportPortalListenerContext.setRunningNowItemId(rs.getId());
+			DisorderedListenerContextDelegate.setRunningNowItemId(rs.getId());
 		} catch (RestEndpointIOException ex) {
 			handleRpException(ex, "Unable start test method: '" + iteration.getName() + "'");
 		}
@@ -326,9 +326,7 @@ class SpockReporter implements ISpockReporter {
 		rq.setStatus(calculateFootprintStatus(footprint));
 		try {
 			reportPortalService.finishTestItem(footprint.getId(), rq);
-			if (!footprint.hasDescendants()) {
-				ReportPortalListenerContext.setRunningNowItemId(null);
-			}
+			DisorderedListenerContextDelegate.setRunningNowItemId(null);
 		} catch (RestEndpointIOException ex) {
 			handleRpException(ex, "Unable finish " + footprint.getClass().getSimpleName() + ": '" + footprint.getItemName() + "'");
 		} finally {
@@ -400,7 +398,6 @@ class SpockReporter implements ISpockReporter {
 		rq.setLaunchId(launchContext.getLaunchId());
 		return rq;
 	}
-
 
 	@VisibleForTesting
 	static String calculateFootprintStatus(ReportableItemFootprint<?> footprint) {
