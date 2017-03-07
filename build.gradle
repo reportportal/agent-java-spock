@@ -4,7 +4,6 @@ plugins {
 }
 
 apply plugin: 'java'
-apply from: 'release.gradle'
 apply from: 'quality.gradle'
 
 sourceCompatibility = 1.6
@@ -34,6 +33,11 @@ tasks.withType(JavaCompile) {
 
 javadoc {
   options.memberLevel = JavadocMemberLevel.PACKAGE
+}
+
+release {
+  failOnCommitNeeded = false
+  failOnPublishNeeded = false
 }
 
 task wrapper(type: Wrapper) {
