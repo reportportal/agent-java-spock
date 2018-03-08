@@ -16,7 +16,8 @@ repositories {
 }
 
 dependencies {
-  compile 'com.epam.reportportal:client-java-core:2.5.1'
+
+  compile 'com.epam.reportportal:client-java-core:2.7.1'
   compileOnly 'org.spockframework:spock-core:1.0-groovy-2.0'
 
   testCompile 'org.hamcrest:hamcrest-all:1.3'
