@@ -22,8 +22,7 @@ package com.epam.reportportal.spock;
 
 import static com.epam.reportportal.listeners.Statuses.FAILED;
 import static com.epam.reportportal.listeners.Statuses.SKIPPED;
-import static com.epam.reportportal.spock.NodeInfoUtils.buildFeatureDescription;
-import static com.epam.reportportal.spock.NodeInfoUtils.getFixtureDisplayName;
+import static com.epam.reportportal.spock.NodeInfoUtils.*;
 import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISHED;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Iterables.filter;
@@ -70,7 +69,7 @@ class SpockReporter implements ISpockReporter {
 
 	// stores the bindings of Spock method kinds to the RP-specific notation
 	private static final Map<MethodKind, String> ITEM_TYPES_REGISTRY = ImmutableMap.<MethodKind, String> builder()
-			.put(SPEC_EXECUTION, "TEST").put(SETUP_SPEC, "BEFORE_CLASS").put(SETUP, "BEFORE_METHOD").put(FEATURE, "STEP")
+			.put(SPEC_EXECUTION, "SUITE").put(SETUP_SPEC, "BEFORE_CLASS").put(SETUP, "BEFORE_METHOD").put(FEATURE, "TEST")
 			.put(CLEANUP, "AFTER_METHOD").put(CLEANUP_SPEC, "AFTER_CLASS").build();
 
 	private final AtomicBoolean rpIsDown = new AtomicBoolean(false);
@@ -306,10 +305,9 @@ class SpockReporter implements ISpockReporter {
 
 	@VisibleForTesting
 	void reportIterationStart(IterationInfo iteration) {
-		FeatureInfo feature = iteration.getFeature();
 		StartTestItemRQ rq = createBaseStartTestItemRQ(iteration.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
-		rq.setDescription(buildFeatureDescription(feature));
-		ReportableItemFootprint specFootprint = launchContext.findSpecFootprint(feature.getSpec());
+		rq.setDescription(buildIterationDescription(iteration));
+		ReportableItemFootprint specFootprint = launchContext.findSpecFootprint(iteration.getFeature().getSpec());
 		try {
 			EntryCreatedRS rs = reportPortalService.startTestItem(specFootprint.getId(), rq);
 			launchContext.addRunningIteration(rs.getId(), iteration);
