@@ -26,6 +26,7 @@ import static java.util.Collections.synchronizedMap;
 import static org.spockframework.runtime.model.BlockKind.WHERE;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nullable;
@@ -102,6 +103,11 @@ final class NodeInfoUtils {
 		return description.toString();
 	}
 
+	static String buildIterationDescription(IterationInfo iterationInfo) {
+		String featureDescription = buildFeatureDescription(iterationInfo.getFeature());
+		return unrollIterationDescription(iterationInfo, featureDescription);
+	}
+
 	/**
 	 * Get display name of the fixture. If fixture is inherited, display name is started from the source specification name.
 	 *
@@ -129,6 +135,22 @@ final class NodeInfoUtils {
      */
 	static String getSpecIdentifier(SpecInfo specInfo) {
 		return specInfo != null ? specInfo.getReflection().getName() : "";
+	}
+
+
+	private static String unrollIterationDescription(IterationInfo iterationInfo, String iterationDescription) {
+		List<String> parameterNames = iterationInfo.getFeature().getParameterNames();
+		Object[] dataValues = iterationInfo.getDataValues();
+
+		for (int i = 0; i < parameterNames.size(); i++) {
+			Object value = dataValues[i];
+			if (value instanceof String) {
+				iterationDescription = iterationDescription
+						.replaceAll("\\{?#" + parameterNames.get(i) + "\\}?", (String) value);
+			}
+		}
+
+		return iterationDescription;
 	}
 
 	private static void appendBlockInfo(StringBuilder featureDescription, BlockInfo block) {
