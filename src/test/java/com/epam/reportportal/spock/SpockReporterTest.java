@@ -96,7 +96,7 @@ public class SpockReporterTest {
 		spockReporter.reportIterationStart(iterationMock);
 
 		verify(rpServiceMock, times(1)).startTestItem(eq(sourceSpecItemId), any(StartTestItemRQ.class));
-		assertThat(requestCaptor.getValue().getType(), equalTo("STEP"));
+		assertThat(requestCaptor.getValue().getType(), equalTo("TEST"));
 	}
 
 	@Test

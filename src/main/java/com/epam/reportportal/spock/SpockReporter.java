@@ -70,7 +70,7 @@ class SpockReporter implements ISpockReporter {
 
 	// stores the bindings of Spock method kinds to the RP-specific notation
 	private static final Map<MethodKind, String> ITEM_TYPES_REGISTRY = ImmutableMap.<MethodKind, String> builder()
-			.put(SPEC_EXECUTION, "TEST").put(SETUP_SPEC, "BEFORE_CLASS").put(SETUP, "BEFORE_METHOD").put(FEATURE, "STEP")
+			.put(SPEC_EXECUTION, "SUITE").put(SETUP_SPEC, "BEFORE_CLASS").put(SETUP, "BEFORE_METHOD").put(FEATURE, "TEST")
 			.put(CLEANUP, "AFTER_METHOD").put(CLEANUP_SPEC, "AFTER_CLASS").build();
 
 	private final AtomicBoolean rpIsDown = new AtomicBoolean(false);
