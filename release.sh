@@ -9,4 +9,4 @@ git remote set-url origin https://$GH_TOKEN@github.com/reportportal/agent-java-s
 git checkout master
 git update-index --chmod=+x gradlew
 chmod +x gradlew
-./gradlew release -Prelease.useAutomaticVersion=true --debug --stacktrace
+./gradlew release -Prelease.useAutomaticVersion=true
