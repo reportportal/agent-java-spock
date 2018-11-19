@@ -1,10 +1,11 @@
 plugins {
-  id 'net.researchgate.release' version '2.4.1'
+  id 'net.researchgate.release' version '2.7.0'
   id "com.jfrog.bintray" version "1.7"
 }
 
 apply plugin: 'java'
 apply from: 'quality.gradle'
+apply from: 'release.gradle'
 
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
@@ -37,6 +38,7 @@ javadoc {
 }
 
 release {
+  preCommitText = "[ci skip]"
   failOnCommitNeeded = false
   failOnPublishNeeded = false
 }
@@ -44,4 +46,3 @@ release {
 task wrapper(type: Wrapper) {
   gradleVersion = '3.0'
 }
-
