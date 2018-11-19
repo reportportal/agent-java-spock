@@ -23,7 +23,7 @@ package com.epam.reportportal.spock;
 import org.spockframework.runtime.model.*;
 
 /**
- * Provides the API for the reporting of <i>Spock<i/> tests
+ * Provides the API for the reporting of Spock tests
  *
  * @author Dzmitry Mikhievich
  */
