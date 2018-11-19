@@ -22,7 +22,7 @@ cache:
 stages:
   - name: build
   - name: release
-    if: branch = master
+    if: branch = master and type != pull_request
 
 jobs:
   include:
