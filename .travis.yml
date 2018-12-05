@@ -18,3 +18,15 @@ cache:
   directories:
     - $HOME/.gradle/caches/
     - $HOME/.gradle/wrapper/
+
+stages:
+  - name: build
+  - name: release
+    if: branch = master and type != pull_request
+
+jobs:
+  include:
+  - stage: build
+    script: ./gradlew build
+  - stage: release
+    script: sh release.sh
