@@ -28,23 +28,23 @@ import org.junit.Test;
  */
 public class ReportableItemFootprintTest {
 
-	@Test
-	public void isNotPublishedCondition_publishedItemIsPassed() {
-		ReportableItemFootprint itemMock = mock(ReportableItemFootprint.class);
-		when(itemMock.isPublished()).thenReturn(true);
+    @Test
+    public void isNotPublishedCondition_publishedItemIsPassed() {
+        ReportableItemFootprint itemMock = mock(ReportableItemFootprint.class);
+        when(itemMock.isPublished()).thenReturn(true);
 
-		boolean actualResult = IS_NOT_PUBLISHED.apply(itemMock);
-		assertThat(actualResult, is(false));
-	}
+        boolean actualResult = IS_NOT_PUBLISHED.apply(itemMock);
+        assertThat(actualResult, is(false));
+    }
 
-	@Test
-	public void isNotPublishedCondition_notPublishedItemIsPassed() {
-		ReportableItemFootprint itemMock = mock(ReportableItemFootprint.class);
-		when(itemMock.isPublished()).thenReturn(false);
+    @Test
+    public void isNotPublishedCondition_notPublishedItemIsPassed() {
+        ReportableItemFootprint itemMock = mock(ReportableItemFootprint.class);
+        when(itemMock.isPublished()).thenReturn(false);
 
-		boolean actualResult = IS_NOT_PUBLISHED.apply(itemMock);
-		assertThat(actualResult, is(true));
-	}
+        boolean actualResult = IS_NOT_PUBLISHED.apply(itemMock);
+        assertThat(actualResult, is(true));
+    }
 
     @Test
     public void isNotPublishedCondition_nullItemIsPassed() {

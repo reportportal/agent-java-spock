@@ -15,14 +15,14 @@
  */
 package com.epam.reportportal.spock;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static rp.com.google.common.base.Preconditions.checkArgument;
 
-import javax.annotation.Nullable;
-
+import org.spockframework.util.Nullable;
 import org.spockframework.runtime.model.NodeInfo;
+import rp.com.google.common.base.Optional;
+import rp.com.google.common.base.Predicate;
+import io.reactivex.Maybe;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
 
 /**
  * Base entity which stores the reporting metadata for the <i>Spock</i> test elements
@@ -31,54 +31,54 @@ import com.google.common.base.Predicate;
  */
 abstract class ReportableItemFootprint<T extends NodeInfo> {
 
-	static final Predicate<ReportableItemFootprint> IS_NOT_PUBLISHED = new Predicate<ReportableItemFootprint>() {
-		@Override
-		public boolean apply(@Nullable ReportableItemFootprint input) {
-			return input != null && !input.isPublished();
-		}
-	};
+    static final Predicate<ReportableItemFootprint> IS_NOT_PUBLISHED = new Predicate<ReportableItemFootprint>() {
+        @Override
+        public boolean apply(@Nullable ReportableItemFootprint input) {
+            return input != null && !input.isPublished();
+        }
+    };
 
-	private final String id;
-	private final T item;
+    private final Maybe<String> id;
+    private final T item;
 
-	private String status;
-	private boolean published = false;
+    private String status;
+    private boolean published = false;
 
-	ReportableItemFootprint(T item, String id) {
-		checkArgument(item != null, "Node info shouldn't be null");
-		checkArgument(id != null, "Test item id shouldn't be null");
+    ReportableItemFootprint(T item, Maybe<String> id) {
+        checkArgument(item != null, "Node info shouldn't be null");
+        checkArgument(id != null, "Test item id shouldn't be null");
 
-		this.id = id;
-		this.item = item;
-	}
+        this.id = id;
+        this.item = item;
+    }
 
-	T getItem() {
-		return item;
-	}
+    T getItem() {
+        return item;
+    }
 
-	String getId() {
-		return id;
-	}
+    Maybe<String> getId() {
+        return id;
+    }
 
-	Optional<String> getStatus() {
-		return Optional.fromNullable(status);
-	}
+    Optional<String> getStatus() {
+        return Optional.fromNullable(status);
+    }
 
-	void setStatus(String status) {
-		this.status = status;
-	}
+    void setStatus(String status) {
+        this.status = status;
+    }
 
-	void markAsPublished() {
-		this.published = true;
-	}
+    void markAsPublished() {
+        this.published = true;
+    }
 
-	boolean isPublished() {
-		return published;
-	}
+    boolean isPublished() {
+        return published;
+    }
 
-	String getItemName() {
-		return getItem().getName();
-	}
+    String getItemName() {
+        return getItem().getName();
+    }
 
-	abstract boolean hasDescendants();
+    abstract boolean hasDescendants();
 }
