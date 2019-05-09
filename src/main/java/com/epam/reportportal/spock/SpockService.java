@@ -46,10 +46,8 @@ import static rp.com.google.common.collect.Iterables.filter;
 public class SpockService implements ISpockService
 {
     public static final String NOT_ISSUE = "NOT_ISSUE";
-
     private final AtomicBoolean isLaunchFailed = new AtomicBoolean();
     private MemoizingSupplier<Launch> launch;
-
     private static final Logger LOGGER = LoggerFactory.getLogger(SpockService.class);
 
     // stores the bindings of Spock method kinds to the RP-specific notation
@@ -100,13 +98,11 @@ public class SpockService implements ISpockService
 
     @Override
     public void startLaunch() {
-        //        System.out.println("[SPOCK SERVICE - startLaunch] Start Launch");
         if (launchContext.tryStartLaunch())
         {
             try
             {
                 Maybe<String> launchId = this.launch.get().start();
-                //                System.out.println(String.format("    Started launch and received a launch ID of: %s", launchId.blockingGet()));
                 launchContext.setLaunchId(launchId);
             }
             catch (RestEndpointIOException ex)
@@ -118,7 +114,6 @@ public class SpockService implements ISpockService
 
     @Override
     public void registerSpec(SpecInfo spec) {
-        //        System.out.println("[SPOCK SERVICE - registerSpec] Register Spec");
         if (rpIsDown.get() || launchContext.isSpecRegistered(spec)) {
             return;
         }
@@ -127,7 +122,6 @@ public class SpockService implements ISpockService
         rq.setDescription(spec.getNarrative());
         try {
             Maybe<String> testItemId = this.launch.get().startTestItem(rq);
-            //            System.out.println(String.format("    Registered spec and received an item ID of: %s", testItemId.blockingGet()));
             launchContext.addRunningSpec(testItemId, spec);
         } catch (RestEndpointIOException ex) {
             handleRpException(ex, "Unable start spec: '" + spec.getName() + "'");
@@ -137,7 +131,6 @@ public class SpockService implements ISpockService
     @Override
     public void registerFixture(MethodInfo fixture)
     {
-        //        System.out.println("[SPOCK SERVICE - registerFixture] Register Fixture");
         if (rpIsDown.get()) {
             return;
         }
@@ -154,8 +147,6 @@ public class SpockService implements ISpockService
             }
 
             Maybe<String> testItemId = this.launch.get().startTestItem(specFootprint.getId(), rq);
-            //            System.out.println(String.format("    Registered fixture and received an item ID of: %s", testItemId.blockingGet()));
-
             NodeFootprint fixtureOwnerFootprint = findFixtureOwner(fixture);
             fixtureOwnerFootprint.addFixtureFootprint(new FixtureFootprint(fixture, testItemId));
         } catch (RestEndpointIOException ex) {
@@ -165,7 +156,6 @@ public class SpockService implements ISpockService
 
     @Override
     public void registerFeature(FeatureInfo feature) {
-        //        System.out.println("[SPOCK SERVICE - registerFeature] Register Feature");
         if (rpIsDown.get()) {
             return;
         }
@@ -179,7 +169,6 @@ public class SpockService implements ISpockService
 
     @Override
     public void registerIteration(IterationInfo iteration) {
-        //        System.out.println("[SPOCK SERVICE - registerIteration] Register Iteration");
         if (rpIsDown.get() || isMonolithicParametrizedFeature(iteration.getFeature())) {
             return;
         }
@@ -188,18 +177,13 @@ public class SpockService implements ISpockService
 
     @Override
     public void publishIterationResult(IterationInfo iteration) {
-        //        System.out.println("[SPOCK SERVICE - publishIterationResult] Publish Iteration Result");
         if (rpIsDown.get()) {
             return;
         }
 
         FeatureInfo feature = iteration.getFeature();
         if (!isMonolithicParametrizedFeature(feature)) {
-
-            //            System.out.println(String.format("The \"%s\" feature has iterations", iteration.getFeature().getName()));
-
             ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(iteration);
-            //            System.out.println(String.format("Publishing iteration \"%s\" result", footprint.getId().blockingGet()));
             reportTestItemFinish(footprint);
             registeredFeatureId = null;
         }
@@ -207,26 +191,17 @@ public class SpockService implements ISpockService
 
     @Override
     public void publishFeatureResult(FeatureInfo feature) {
-        //        System.out.println("[SPOCK SERVICE - publishFeatureResult] Publish Feature Result");
         if (rpIsDown.get()) {
             return;
         }
 
         if (isMonolithicParametrizedFeature(feature)) {
-
-            //            System.out.println(String.format("The \"%s\" feature does NOT have iterations", feature.getName()));
-
             ReportableItemFootprint<IterationInfo> footprint = getFirst(launchContext.findIterationFootprints(feature), null);
-            //            System.out.println(String.format("Publishing monolithic feature \"%s\" result", footprint.getId().blockingGet()));
             reportTestItemFinish(footprint);
         } else {
-
-            //            System.out.println(String.format("The \"%s\" feature possibly has iterations", feature.getName()));
-
             Iterable<? extends ReportableItemFootprint<IterationInfo>> iterations = launchContext.findIterationFootprints(feature);
             Iterable<? extends ReportableItemFootprint<IterationInfo>> nonPublishedIterations = filter(iterations, IS_NOT_PUBLISHED);
             for (ReportableItemFootprint<IterationInfo> iterationFootprint : nonPublishedIterations) {
-                //                System.out.println(String.format("Publishing non-published iteration \"%s\" result", iterationFootprint.getId().blockingGet()));
                 reportTestItemFinish(iterationFootprint);
             }
         }
@@ -234,16 +209,13 @@ public class SpockService implements ISpockService
 
     @Override
     public void publishFixtureResult(MethodInfo fixture) {
-        //        System.out.println("[SPOCK SERVICE - publishFixtureResult] Publish Fixture Result");
         if (rpIsDown.get()) {
             return;
         }
 
         NodeFootprint ownerFootprint = findFixtureOwner(fixture);
         ReportableItemFootprint fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(fixture);
-        //        System.out.println(String.format("Publishing fixture \"%s\" result", fixtureFootprint.getId().blockingGet()));
         reportTestItemFinish(fixtureFootprint);
-
         MethodKind kind = fixture.getKind();
         if(registeredFeatureId != null && kind == SETUP)
         {
@@ -253,20 +225,16 @@ public class SpockService implements ISpockService
 
     @Override
     public void publishSpecResult(SpecInfo spec) {
-        //        System.out.println("[SPOCK SERVICE - publishSpecResult] Publish Spec Result");
         if (rpIsDown.get()) {
             return;
         }
 
         ReportableItemFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
-        //       System.out.println(String.format("Publishing spec \"%s\" result", specFootprint.getId().blockingGet()));
         reportTestItemFinish(specFootprint);
     }
 
     @Override
     public void reportError(ErrorInfo error) {
-        //        System.out.println("[SPOCK SERVICE - reportError] Report error");
-
         if (rpIsDown.get()) {
             return;
         }
@@ -314,7 +282,6 @@ public class SpockService implements ISpockService
 
     @Override
     public void trackSkippedFeature(FeatureInfo featureInfo) {
-        //        System.out.println("[SPOCK SERVICE - trackSkippedFeature] Track Skipped Feature");
         if (rpIsDown.get()) {
             return;
         }
@@ -330,7 +297,6 @@ public class SpockService implements ISpockService
 
     @Override
     public void trackSkippedSpec(SpecInfo spec) {
-        //        System.out.println("[SPOCK SERVICE - trackSkippedSpec] Track Skipped Spec");
         if (rpIsDown.get()) {
             return;
         }
@@ -343,7 +309,6 @@ public class SpockService implements ISpockService
     @Override
     public void finishLaunch() {
         if (launchContext.tryFinishLaunch()) {
-            //            System.out.println("[SPOCK SERVICE - finishLaunch] Publish all registered unpublished specifications first");
             // publish all registered unpublished specifications first
             Iterable<? extends NodeFootprint<SpecInfo>> unpublishedSpecFootprints = launchContext.findAllUnpublishedSpecFootprints();
             for (NodeFootprint<SpecInfo> footprint : unpublishedSpecFootprints) {
@@ -370,10 +335,7 @@ public class SpockService implements ISpockService
         ReportableItemFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(iteration.getFeature().getSpec());
         try {
             Maybe<String> testItemId = launch.get().startTestItem(specFootprint.getId(), rq);
-
             registeredFeatureId = testItemId;
-
-            //            System.out.println(String.format("    Registered iteration and received an item ID of: %s", testItemId.blockingGet()));
             launchContext.addRunningIteration(testItemId, iteration);
         } catch (RestEndpointIOException ex) {
             handleRpException(ex, "Unable start test method: '" + iteration.getName() + "'");
@@ -440,56 +402,7 @@ public class SpockService implements ISpockService
             }
         }
 
-        //        // Check if spec setup failed for a spec - if so, then fail the spec
-        //        if(footprint.getItem() instanceof SpecInfo)
-        //        {
-        //            List<ReportableItemFootprint<MethodInfo>> fixtures = ((NodeFootprint<SpecInfo>)footprint).getFixtures();
-        //
-        //            boolean fixtureError = false;
-        //            for(ReportableItemFootprint<MethodInfo> methodInfo : fixtures)
-        //            {
-        //                if(methodInfo.getItem().getKind() != CLEANUP_SPEC)
-        //                {
-        //                    Optional<String> methodStatus = methodInfo.getStatus();
-        //
-        //                    if (methodStatus.isPresent())
-        //                    {
-        //                        if (methodStatus.get().equalsIgnoreCase(Statuses.FAILED))
-        //                        {
-        //                            fixtureError = true;
-        //                            break;
-        //                        }
-        //                    }
-        //                }
-        //            }
-        //
-        //            if(fixtureError)
-        //            {
-        //                List<FeatureInfo> featureInfoList = ((NodeFootprint<SpecInfo>)footprint).getItem().getAllFeatures();
-        //
-        //                for(FeatureInfo featureInfo : featureInfoList)
-        //                {
-        //                    registerFeature(featureInfo);
-        //
-        ////                    FinishTestItemRQ req = new FinishTestItemRQ();
-        ////                    req.setEndTime(Calendar.getInstance().getTime());
-        ////                    Issue issue = new Issue();
-        ////                    issue.setIssueType(NOT_ISSUE);
-        ////                    req.setIssue(issue);
-        ////                    launch.get().finishTestItem(footprint.getId(), req);
-        //
-        //                    publishFeatureResult(featureInfo);
-        //                }
-        //
-        //                footprint.setStatus(Statuses.FAILED);
-        //                Issue issue = new Issue();
-        //                issue.setIssueType(NOT_ISSUE);
-        //                rq.setIssue(issue);
-        //            }
-        //        }
-
         String footprintStatus = calculateFootprintStatus(footprint);
-
         rq.setStatus(footprintStatus);
 
         if(!failLaunch)
