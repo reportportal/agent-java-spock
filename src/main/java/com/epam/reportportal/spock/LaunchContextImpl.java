@@ -102,12 +102,7 @@ class LaunchContextImpl extends AbstractLaunchContext {
 
     @Override
     public Iterable<Specification> findAllUnpublishedSpecFootprints() {
-        //return filter(specFootprintsRegistry.values(), IS_NOT_PUBLISHED);
-
-        Iterable<Specification> unpublishedSpecFootprints = filter(specFootprintsRegistry.values(), IS_NOT_PUBLISHED);
-        int size = getIterableSize(unpublishedSpecFootprints);
-        System.out.println(String.format("[LAUNCH CONTEXT - findAllUnpublishedSpecFootprints] Found %d unpublished spec footprints", size));
-        return unpublishedSpecFootprints;
+        return filter(specFootprintsRegistry.values(), IS_NOT_PUBLISHED);
     }
 
     private int getIterableSize(Iterable iterable)

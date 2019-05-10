@@ -50,7 +50,7 @@ public class ReportPortalSpockExtension implements IGlobalExtension
     @Override
     public void stop()
     {
-        LOGGER.info("Finishing the test run \"LAUNCH\"");
+        LOGGER.info("\"LAUNCH\" completed");
         spockService.finishLaunch();
     }
 }
