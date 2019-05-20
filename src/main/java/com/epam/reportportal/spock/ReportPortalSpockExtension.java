@@ -15,11 +15,11 @@
  */
 package com.epam.reportportal.spock;
 
-import org.spockframework.runtime.IRunListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.spockframework.runtime.extension.IGlobalExtension;
 import org.spockframework.runtime.model.SpecInfo;
 
-import com.epam.reportportal.guice.Injector;
 
 /**
  * Implementation of {@link org.spockframework.runtime.extension.IGlobalExtension}, which provides the
@@ -27,25 +27,30 @@ import com.epam.reportportal.guice.Injector;
  *
  * @author Dzmitry Mikhievich
  */
-public class ReportPortalSpockExtension implements IGlobalExtension {
+public class ReportPortalSpockExtension implements IGlobalExtension
+{
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReportPortalSpockExtension.class);
 
-	private static final Injector INJECTOR = Injector.getInstance().getChildInjector(new SpockListenersModule());
+    private final BaseSpockListener reportingRunListener = new ReportPortalSpockListener();
+    private final ISpockService spockService = reportingRunListener.getSpockService();
 
-	private final ISpockReporter spockReporter = INJECTOR.getBean(ISpockReporter.class);
-	private final IRunListener reportingRunListener = INJECTOR.getBean(IRunListener.class);
+    @Override
+    public void start() {
+        LOGGER.info("\"LAUNCHING\" the test run");
+        spockService.startLaunch();
+    }
 
-	@Override
-	public void start() {
-		spockReporter.startLaunch();
-	}
+    @Override
+    public void visitSpec(SpecInfo spec)
+    {
+        LOGGER.info("Visiting spec: " + spec.getName());
+        spec.addListener(reportingRunListener);
+    }
 
-	@Override
-	public void visitSpec(SpecInfo spec) {
-		spec.addListener(reportingRunListener);
-	}
-
-	@Override
-	public void stop() {
-		spockReporter.finishLaunch();
-	}
+    @Override
+    public void stop()
+    {
+        LOGGER.info("\"LAUNCH\" completed");
+        spockService.finishLaunch();
+    }
 }

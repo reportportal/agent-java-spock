@@ -19,12 +19,11 @@ import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 
 import java.util.concurrent.atomic.AtomicReference;
-
-import javax.annotation.Nullable;
-
+import io.reactivex.Maybe;
 import org.spockframework.runtime.model.FeatureInfo;
 import org.spockframework.runtime.model.IterationInfo;
 import org.spockframework.runtime.model.SpecInfo;
+import org.spockframework.util.Nullable;
 
 /**
  * Context which stores and provides the reporting meta data during the test
@@ -34,58 +33,58 @@ import org.spockframework.runtime.model.SpecInfo;
  */
 abstract class AbstractLaunchContext {
 
-	private String launchId;
-	private AtomicReference<Boolean> launchInProgress = new AtomicReference<Boolean>();
+    private Maybe<String> launchId;
+    private AtomicReference<Boolean> launchInProgress = new AtomicReference<Boolean>();
 
-	@Nullable
-	String getLaunchId() {
-		return launchId;
-	}
+    @Nullable
+    Maybe<String> getLaunchId() {
+        return launchId;
+    }
 
-	void setLaunchId(String launchId) {
-		this.launchId = launchId;
-	}
+    void setLaunchId(Maybe<String> launchId) {
+        this.launchId = launchId;
+    }
 
-	/**
-	 * @return true if launch status hadn't been started previously, false
-	 *         otherwise
-	 */
-	boolean tryStartLaunch() {
-		return launchInProgress.compareAndSet(null, TRUE);
-	}
+    /**
+     * @return true if launch status hadn't been started previously, false
+     *         otherwise
+     */
+    boolean tryStartLaunch() {
+        return launchInProgress.compareAndSet(null, TRUE);
+    }
 
-	/**
-	 * @return true if launch status hadn't been started previously, false
-	 *         otherwise
-	 */
-	boolean tryFinishLaunch() {
-		return launchInProgress.compareAndSet(TRUE, FALSE);
-	}
+    /**
+     * @return true if launch status hadn't been started previously, false
+     *         otherwise
+     */
+    boolean tryFinishLaunch() {
+        return launchInProgress.compareAndSet(TRUE, FALSE);
+    }
 
-	boolean isSpecRegistered(SpecInfo specInfo) {
-		return findSpecFootprint(specInfo) != null;
-	}
+    boolean isSpecRegistered(SpecInfo specInfo) {
+        return findSpecFootprint(specInfo) != null;
+    }
 
-	abstract void addRunningSpec(String id, SpecInfo specInfo);
+    abstract void addRunningSpec(Maybe<String> id, SpecInfo specInfo);
 
-	abstract void addRunningFeature(FeatureInfo featureInfo);
+    abstract void addRunningFeature(FeatureInfo featureInfo);
 
-	abstract void addRunningIteration(String id, IterationInfo iterationInfo);
+    abstract void addRunningIteration(Maybe<String> id, IterationInfo iterationInfo);
 
-	abstract NodeFootprint<IterationInfo> findIterationFootprint(IterationInfo iterationInfo);
+    abstract NodeFootprint<IterationInfo> findIterationFootprint(IterationInfo iterationInfo);
 
-	abstract Iterable<? extends NodeFootprint<IterationInfo>> findIterationFootprints(FeatureInfo featureInfo);
+    abstract Iterable<? extends NodeFootprint<IterationInfo>> findIterationFootprints(FeatureInfo featureInfo);
 
-	abstract NodeFootprint<SpecInfo> findSpecFootprint(SpecInfo specInfo);
+    abstract NodeFootprint<SpecInfo> findSpecFootprint(SpecInfo specInfo);
 
-	abstract Iterable<? extends NodeFootprint<SpecInfo>> findAllUnpublishedSpecFootprints();
+    abstract Iterable<? extends NodeFootprint<SpecInfo>> findAllUnpublishedSpecFootprints();
 
-	abstract IRuntimePointer getRuntimePointerForSpec(SpecInfo specInfo);
+    abstract IRuntimePointer getRuntimePointerForSpec(SpecInfo specInfo);
 
-	interface IRuntimePointer {
+    interface IRuntimePointer {
 
-		FeatureInfo getCurrentFeature();
+        FeatureInfo getCurrentFeature();
 
-		IterationInfo getCurrentIteration();
-	}
+        IterationInfo getCurrentIteration();
+    }
 }
