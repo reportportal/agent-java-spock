@@ -1,7 +1,7 @@
 # agent-java-spock
 
 ## Latest version
-[ ![Download](https://api.bintray.com/packages/epam/reportportal/agent-java-spock/images/download.svg) ](https://bintray.com/epam/reportportal/agent-java-spock/_latestVersion)
+[![Maven Central](https://img.shields.io/maven-central/v/com.epam.reportportal/agent-java-spock.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22agent-java-spock%22)
 
 ## Video Tutorial for integration of SPOCK on Groovy
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/Rkm8dpTZur8/0.jpg)](https://www.youtube.com/watch?v=Rkm8dpTZur8)
@@ -54,9 +54,6 @@ Now we can use the `*Version` variables in `dependencies` section. And also we l
 
 ```gradle
 repositories {
-    jcenter {
-        url 'https://dl.bintray.com/epam/reportportal'
-    }
     mavenCentral()
 }
 ```
@@ -68,7 +65,7 @@ repositories {
 testCompile 'com.epam.reportportal:agent-java-spock:2.6.0'
 ```
 
-> Latest version of the agent, could be found [here](https://bintray.com/epam/reportportal/agent-java-spock)
+> Latest version of the agent, could be found [here](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22agent-java-spock%22)
 
 *ReportPortal java client*
 ```gradle
@@ -109,7 +106,7 @@ If you prefer using *Logback* logging library, add following dependencies:
 testCompile 'com.epam.reportportal:logger-java-logback:2.6.0'
 ```
 
-> Up to date version could be found [here](https://bintray.com/epam/reportportal/logger-java-logback)
+> Up to date version could be found [here](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22logger-java-logback%22)
 
 *The logback itself*
 ```gradle
@@ -122,7 +119,7 @@ If you prefer using *Log4j* logging library, add following dependencies:
 ```gradle
 testCompile 'com.epam.reportportal:logger-java-log4j:4.0.1'
 ```
-> Up to date version could be found [here](https://bintray.com/epam/reportportal/logger-java-log4j)
+> Up to date version could be found [here](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22logger-java-log4j%22)
 
 *The log4j itself*
 ```gradle
@@ -176,9 +173,6 @@ ext {
 apply plugin: "groovy"
 
 repositories {
-    jcenter {
-        url 'https://dl.bintray.com/epam/reportportal'
-    }
     mavenCentral()
 }
 
