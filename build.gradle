@@ -12,8 +12,7 @@ targetCompatibility = 1.6
 
 description = 'Spock client'
 repositories {
-  jcenter()
-  maven { url "http://dl.bintray.com/epam/reportportal" }
+  mavenCentral()
 }
 
 dependencies {
