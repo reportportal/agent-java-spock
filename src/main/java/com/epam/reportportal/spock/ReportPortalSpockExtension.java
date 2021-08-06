@@ -27,8 +27,7 @@ import org.spockframework.runtime.model.SpecInfo;
  *
  * @author Dzmitry Mikhievich
  */
-public class ReportPortalSpockExtension implements IGlobalExtension
-{
+public class ReportPortalSpockExtension implements IGlobalExtension {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReportPortalSpockExtension.class);
 
     private final BaseSpockListener reportingRunListener = new ReportPortalSpockListener();
@@ -41,15 +40,13 @@ public class ReportPortalSpockExtension implements IGlobalExtension
     }
 
     @Override
-    public void visitSpec(SpecInfo spec)
-    {
+    public void visitSpec(SpecInfo spec) {
         LOGGER.info("Visiting spec: " + spec.getName());
         spec.addListener(reportingRunListener);
     }
 
     @Override
-    public void stop()
-    {
+    public void stop() {
         LOGGER.info("\"LAUNCH\" completed");
         spockService.finishLaunch();
     }

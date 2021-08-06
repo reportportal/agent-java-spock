@@ -15,22 +15,20 @@
  */
 package com.epam.reportportal.spock;
 
-import static com.epam.reportportal.spock.NodeInfoUtils.getSpecIdentifier;
-import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISHED;
-import static rp.com.google.common.collect.Iterables.filter;
-
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import io.reactivex.Maybe;
 import org.spockframework.runtime.model.FeatureInfo;
 import org.spockframework.runtime.model.IterationInfo;
 import org.spockframework.runtime.model.SpecInfo;
-import rp.com.google.common.base.Predicate;
 import rp.com.google.common.collect.Iterables;
 import rp.com.google.common.collect.Lists;
+
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import static com.epam.reportportal.spock.NodeInfoUtils.getSpecIdentifier;
+import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISHED;
+import static rp.com.google.common.collect.Iterables.filter;
 
 
 /**
@@ -40,8 +38,8 @@ import rp.com.google.common.collect.Lists;
  */
 class LaunchContextImpl extends AbstractLaunchContext {
 
-    private final Map<String, Specification> specFootprintsRegistry = new ConcurrentHashMap<String, Specification>();
-    private final Map<String, RuntimePointer> runtimePointersRegistry = new ConcurrentHashMap<String, RuntimePointer>();
+    private final Map<String, Specification> specFootprintsRegistry = new ConcurrentHashMap<>();
+    private final Map<String, RuntimePointer> runtimePointersRegistry = new ConcurrentHashMap<>();
 
     @Override
     public void addRunningSpec(Maybe<String> id, SpecInfo specInfo) {
@@ -105,21 +103,6 @@ class LaunchContextImpl extends AbstractLaunchContext {
         return filter(specFootprintsRegistry.values(), IS_NOT_PUBLISHED);
     }
 
-    private int getIterableSize(Iterable iterable)
-    {
-        if (iterable instanceof Collection) {
-            return ((Collection<?>) iterable).size();
-        } else {
-            int count = 0;
-            Iterator iterator = iterable.iterator();
-            while(iterator.hasNext()) {
-                iterator.next();
-                count++;
-            }
-            return count;
-        }
-    }
-
     @Override
     public RuntimePointer getRuntimePointerForSpec(SpecInfo specInfo) {
         return findValueInRegistry(runtimePointersRegistry, specInfo);
@@ -153,12 +136,7 @@ class LaunchContextImpl extends AbstractLaunchContext {
         }
 
         private Feature getFeature(final FeatureInfo featureInfo) {
-            return Iterables.find(getAllTrackedFeatures(), new Predicate<Feature>() {
-                @Override
-                public boolean apply(Feature input) {
-                    return input != null && featureInfo.equals(input.featureInfo);
-                }
-            });
+            return Iterables.find(getAllTrackedFeatures(), input -> input != null && featureInfo.equals(input.featureInfo));
         }
 
         private List<Feature> getAllTrackedFeatures() {
@@ -187,12 +165,7 @@ class LaunchContextImpl extends AbstractLaunchContext {
 
         private Iteration getIteration(final IterationInfo iterationInfo) {
 
-            return Iterables.find(getAllTrackedIteration(), new Predicate<Iteration>() {
-                @Override
-                public boolean apply(Iteration input) {
-                    return input != null && iterationInfo.equals(input.getItem());
-                }
-            });
+            return Iterables.find(getAllTrackedIteration(), input -> input != null && iterationInfo.equals(input.getItem()));
         }
 
         private void addIteration(IterationInfo iterationInfo, Maybe<String> id) {

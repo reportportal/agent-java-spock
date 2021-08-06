@@ -6,8 +6,7 @@ import org.spockframework.runtime.model.*;
 /**
  * Describes all operations for com.epam.reportportal.spock RP listener handler
  */
-public interface ISpockService
-{
+public interface ISpockService {
     /**
      * Trigger test execution start
      */

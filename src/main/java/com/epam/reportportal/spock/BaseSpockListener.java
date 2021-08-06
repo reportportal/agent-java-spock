@@ -17,9 +17,11 @@ package com.epam.reportportal.spock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.spockframework.runtime.AbstractRunListener;
 import org.spockframework.runtime.model.*;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static rp.com.google.common.base.Preconditions.checkArgument;
 
 
@@ -28,16 +30,14 @@ import static rp.com.google.common.base.Preconditions.checkArgument;
  * methods, suites, test classes.
  * Can be extended by providing {@link ISpockService} implementation
  */
-public class BaseSpockListener extends AbstractRunListener
-{
+public class BaseSpockListener extends AbstractRunListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(BaseSpockListener.class);
 
     private static final AtomicInteger INSTANCES = new AtomicInteger(0);
 
-    private ISpockService spockService;
+    private final ISpockService spockService;
 
-    public BaseSpockListener(ISpockService spockService)
-    {
+    public BaseSpockListener(ISpockService spockService) {
         checkArgument(spockService != null, "Spock service shouldn't be null");
 
         this.spockService = spockService;
@@ -50,8 +50,7 @@ public class BaseSpockListener extends AbstractRunListener
         }
     }
 
-    public ISpockService getSpockService()
-    {
+    public ISpockService getSpockService() {
         return spockService;
     }
 
@@ -64,8 +63,7 @@ public class BaseSpockListener extends AbstractRunListener
     }
 
     @Override
-    public void beforeFeature(FeatureInfo feature)
-    {
+    public void beforeFeature(FeatureInfo feature) {
         spockService.registerFeature(feature);
     }
 

@@ -15,17 +15,17 @@
  */
 package com.epam.reportportal.spock;
 
+import io.reactivex.Maybe;
+import org.spockframework.runtime.model.MethodInfo;
+import org.spockframework.runtime.model.NodeInfo;
+import rp.com.google.common.base.Predicate;
+
+import java.util.List;
+
 import static rp.com.google.common.base.Predicates.and;
 import static rp.com.google.common.collect.Iterables.find;
 import static rp.com.google.common.collect.Lists.newArrayList;
 import static rp.com.google.common.collect.Lists.newArrayListWithCapacity;
-
-import java.util.List;
-import io.reactivex.Maybe;
-import org.spockframework.util.Nullable;
-import org.spockframework.runtime.model.MethodInfo;
-import org.spockframework.runtime.model.NodeInfo;
-import rp.com.google.common.base.Predicate;
 
 
 /**
@@ -76,11 +76,6 @@ abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFootprint
     }
 
     private static Predicate<ReportableItemFootprint<MethodInfo>> createFixtureMatchPredicate(final MethodInfo fixture) {
-        return new Predicate<ReportableItemFootprint<MethodInfo>>() {
-            @Override
-            public boolean apply(@Nullable ReportableItemFootprint<MethodInfo> footprint) {
-                return footprint != null && fixture.equals(footprint.getItem());
-            }
-        };
+        return footprint -> footprint != null && fixture.equals(footprint.getItem());
     }
 }
