@@ -15,22 +15,20 @@
  */
 package com.epam.reportportal.spock;
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import io.reactivex.Maybe;
 import org.spockframework.runtime.model.FeatureInfo;
 import org.spockframework.runtime.model.IterationInfo;
 import org.spockframework.runtime.model.SpecInfo;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 
 import java.util.List;
 import java.util.Map;
-
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static com.epam.reportportal.spock.NodeInfoUtils.getSpecIdentifier;
 import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISHED;
-
 
 /**
  * Default implementation of {@link AbstractLaunchContext}
@@ -39,174 +37,174 @@ import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISH
  */
 class LaunchContextImpl extends AbstractLaunchContext {
 
-    private final Map<String, Specification> specFootprintsRegistry = new ConcurrentHashMap<>();
-    private final Map<String, RuntimePointer> runtimePointersRegistry = new ConcurrentHashMap<>();
+	private final Map<String, Specification> specFootprintsRegistry = new ConcurrentHashMap<>();
+	private final Map<String, RuntimePointer> runtimePointersRegistry = new ConcurrentHashMap<>();
 
-    @Override
-    public void addRunningSpec(Maybe<String> id, SpecInfo specInfo) {
-        Specification specFootprint = new Specification(specInfo, id);
-        String specIdentifier = getSpecIdentifier(specInfo);
-        runtimePointersRegistry.put(specIdentifier, new RuntimePointer());
-        specFootprintsRegistry.put(specIdentifier, specFootprint);
-    }
+	@Override
+	public void addRunningSpec(Maybe<String> id, SpecInfo specInfo) {
+		Specification specFootprint = new Specification(specInfo, id);
+		String specIdentifier = getSpecIdentifier(specInfo);
+		runtimePointersRegistry.put(specIdentifier, new RuntimePointer());
+		specFootprintsRegistry.put(specIdentifier, specFootprint);
+	}
 
-    @Override
-    public void addRunningFeature(FeatureInfo featureInfo) {
-        SpecInfo specInfo = featureInfo.getSpec();
-        Specification specFootprint = findSpecFootprint(featureInfo.getSpec());
-        if (specFootprint != null) {
-            getRuntimePointerForSpec(specInfo).setFeatureInfo(featureInfo);
-            specFootprint.addRunningFeature(featureInfo);
-        }
-    }
+	@Override
+	public void addRunningFeature(FeatureInfo featureInfo) {
+		SpecInfo specInfo = featureInfo.getSpec();
+		Specification specFootprint = findSpecFootprint(featureInfo.getSpec());
+		if (specFootprint != null) {
+			getRuntimePointerForSpec(specInfo).setFeatureInfo(featureInfo);
+			specFootprint.addRunningFeature(featureInfo);
+		}
+	}
 
-    @Override
-    public void addRunningIteration(Maybe<String> id, IterationInfo iterationInfo) {
-        SpecInfo specInfo = iterationInfo.getFeature().getSpec();
-        Specification specification = findSpecFootprint(specInfo);
-        if (specification != null) {
-            Feature feature = specification.getFeature(iterationInfo.getFeature());
-            if (feature != null) {
-                getRuntimePointerForSpec(specInfo).setIterationInfo(iterationInfo);
-                feature.addIteration(iterationInfo, id);
-            }
-        }
-    }
+	@Override
+	public void addRunningIteration(Maybe<String> id, IterationInfo iterationInfo) {
+		SpecInfo specInfo = iterationInfo.getFeature().getSpec();
+		Specification specification = findSpecFootprint(specInfo);
+		if (specification != null) {
+			Feature feature = specification.getFeature(iterationInfo.getFeature());
+			if (feature != null) {
+				getRuntimePointerForSpec(specInfo).setIterationInfo(iterationInfo);
+				feature.addIteration(iterationInfo, id);
+			}
+		}
+	}
 
-    @Override
-    public NodeFootprint<IterationInfo> findIterationFootprint(IterationInfo iterationInfo) {
-        Specification specFootprint = findSpecFootprint(iterationInfo.getFeature().getSpec());
-        if (specFootprint != null) {
-            Feature feature = specFootprint.getFeature(iterationInfo.getFeature());
-            if (feature != null) {
-                return feature.getIteration(iterationInfo);
-            }
-        }
-        return null;
-    }
+	@Override
+	public NodeFootprint<IterationInfo> findIterationFootprint(IterationInfo iterationInfo) {
+		Specification specFootprint = findSpecFootprint(iterationInfo.getFeature().getSpec());
+		if (specFootprint != null) {
+			Feature feature = specFootprint.getFeature(iterationInfo.getFeature());
+			if (feature != null) {
+				return feature.getIteration(iterationInfo);
+			}
+		}
+		return null;
+	}
 
-    @Override
-    public Iterable<Iteration> findIterationFootprints(FeatureInfo featureInfo) {
-        Specification specFootprint = findSpecFootprint(featureInfo.getSpec());
-        if (specFootprint != null) {
-            return specFootprint.getFeature(featureInfo).getAllTrackedIteration();
-        }
-        return null;
-    }
+	@Override
+	public Iterable<Iteration> findIterationFootprints(FeatureInfo featureInfo) {
+		Specification specFootprint = findSpecFootprint(featureInfo.getSpec());
+		if (specFootprint != null) {
+			return specFootprint.getFeature(featureInfo).getAllTrackedIteration();
+		}
+		return null;
+	}
 
-    @Override
-    public Specification findSpecFootprint(final SpecInfo specInfo) {
-        return findValueInRegistry(specFootprintsRegistry, specInfo);
-    }
+	@Override
+	public Specification findSpecFootprint(final SpecInfo specInfo) {
+		return findValueInRegistry(specFootprintsRegistry, specInfo);
+	}
 
-    @Override
-    public Iterable<Specification> findAllUnpublishedSpecFootprints() {
-        return specFootprintsRegistry.values().stream().filter(IS_NOT_PUBLISHED).collect(Collectors.toList());
-    }
+	@Override
+	public Iterable<Specification> findAllUnpublishedSpecFootprints() {
+		return specFootprintsRegistry.values().stream().filter(IS_NOT_PUBLISHED).collect(Collectors.toList());
+	}
 
-    @Override
-    public RuntimePointer getRuntimePointerForSpec(SpecInfo specInfo) {
-        return findValueInRegistry(runtimePointersRegistry, specInfo);
-    }
+	@Override
+	public RuntimePointer getRuntimePointerForSpec(SpecInfo specInfo) {
+		return findValueInRegistry(runtimePointersRegistry, specInfo);
+	}
 
-    private <T> T findValueInRegistry(Map<String, T> registry, SpecInfo specInfo) {
-        T value = null;
-        SpecInfo specToFind = specInfo;
-        while (value == null && specToFind != null) {
-            value = registry.get(getSpecIdentifier(specToFind));
-            specToFind = specToFind.getSubSpec();
-        }
-        return value;
-    }
+	private <T> T findValueInRegistry(Map<String, T> registry, SpecInfo specInfo) {
+		T value = null;
+		SpecInfo specToFind = specInfo;
+		while (value == null && specToFind != null) {
+			value = registry.get(getSpecIdentifier(specToFind));
+			specToFind = specToFind.getSubSpec();
+		}
+		return value;
+	}
 
-    private static class Specification extends NodeFootprint<SpecInfo> {
+	private static class Specification extends NodeFootprint<SpecInfo> {
 
-        private List<Feature> features;
+		private List<Feature> features;
 
-        Specification(SpecInfo nodeInfo, Maybe<String> id) {
-            super(nodeInfo, id);
-        }
+		Specification(SpecInfo nodeInfo, Maybe<String> id) {
+			super(nodeInfo, id);
+		}
 
-        @Override
-        public boolean hasDescendants() {
-            return true;
-        }
+		@Override
+		public boolean hasDescendants() {
+			return true;
+		}
 
-        private void addRunningFeature(FeatureInfo featureInfo) {
-            getAllTrackedFeatures().add(new Feature(featureInfo));
-        }
+		private void addRunningFeature(FeatureInfo featureInfo) {
+			getAllTrackedFeatures().add(new Feature(featureInfo));
+		}
 
-        private Feature getFeature(final FeatureInfo featureInfo) {
-            return Iterables.find(getAllTrackedFeatures(), input -> input != null && featureInfo.equals(input.featureInfo));
-        }
+		private Feature getFeature(final FeatureInfo featureInfo) {
+			return Iterables.find(getAllTrackedFeatures(), input -> input != null && featureInfo.equals(input.featureInfo));
+		}
 
-        private List<Feature> getAllTrackedFeatures() {
-            if (features == null) {
-                features = Lists.newArrayList();
-            }
-            return features;
-        }
-    }
+		private List<Feature> getAllTrackedFeatures() {
+			if (features == null) {
+				features = Lists.newArrayList();
+			}
+			return features;
+		}
+	}
 
-    private static class Feature {
+	private static class Feature {
 
-        private final FeatureInfo featureInfo;
-        private List<Iteration> iterations;
+		private final FeatureInfo featureInfo;
+		private List<Iteration> iterations;
 
-        Feature(FeatureInfo featureInfo) {
-            this.featureInfo = featureInfo;
-        }
+		Feature(FeatureInfo featureInfo) {
+			this.featureInfo = featureInfo;
+		}
 
-        private List<Iteration> getAllTrackedIteration() {
-            if (iterations == null) {
-                iterations = Lists.newArrayList();
-            }
-            return iterations;
-        }
+		private List<Iteration> getAllTrackedIteration() {
+			if (iterations == null) {
+				iterations = Lists.newArrayList();
+			}
+			return iterations;
+		}
 
-        private Iteration getIteration(final IterationInfo iterationInfo) {
+		private Iteration getIteration(final IterationInfo iterationInfo) {
 
-            return Iterables.find(getAllTrackedIteration(), input -> input != null && iterationInfo.equals(input.getItem()));
-        }
+			return Iterables.find(getAllTrackedIteration(), input -> input != null && iterationInfo.equals(input.getItem()));
+		}
 
-        private void addIteration(IterationInfo iterationInfo, Maybe<String> id) {
-            getAllTrackedIteration().add(new Iteration(iterationInfo, id));
-        }
-    }
+		private void addIteration(IterationInfo iterationInfo, Maybe<String> id) {
+			getAllTrackedIteration().add(new Iteration(iterationInfo, id));
+		}
+	}
 
-    private static class Iteration extends NodeFootprint<IterationInfo> {
+	private static class Iteration extends NodeFootprint<IterationInfo> {
 
-        Iteration(IterationInfo nodeInfo, Maybe<String> id) {
-            super(nodeInfo, id);
-        }
+		Iteration(IterationInfo nodeInfo, Maybe<String> id) {
+			super(nodeInfo, id);
+		}
 
-        @Override
-        public boolean hasDescendants() {
-            return false;
-        }
-    }
+		@Override
+		public boolean hasDescendants() {
+			return false;
+		}
+	}
 
-    private static class RuntimePointer implements IRuntimePointer {
+	private static class RuntimePointer implements IRuntimePointer {
 
-        private FeatureInfo featureInfo;
-        private IterationInfo iterationInfo;
+		private FeatureInfo featureInfo;
+		private IterationInfo iterationInfo;
 
-        private void setFeatureInfo(FeatureInfo featureInfo) {
-            this.featureInfo = featureInfo;
-        }
+		private void setFeatureInfo(FeatureInfo featureInfo) {
+			this.featureInfo = featureInfo;
+		}
 
-        private void setIterationInfo(IterationInfo iterationInfo) {
-            this.iterationInfo = iterationInfo;
-        }
+		private void setIterationInfo(IterationInfo iterationInfo) {
+			this.iterationInfo = iterationInfo;
+		}
 
-        @Override
-        public FeatureInfo getCurrentFeature() {
-            return featureInfo;
-        }
+		@Override
+		public FeatureInfo getCurrentFeature() {
+			return featureInfo;
+		}
 
-        @Override
-        public IterationInfo getCurrentIteration() {
-            return iterationInfo;
-        }
-    }
+		@Override
+		public IterationInfo getCurrentIteration() {
+			return iterationInfo;
+		}
+	}
 }

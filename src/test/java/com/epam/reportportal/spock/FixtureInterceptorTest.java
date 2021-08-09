@@ -15,8 +15,6 @@
  */
 package com.epam.reportportal.spock;
 
-import static org.mockito.Mockito.*;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -29,63 +27,65 @@ import org.spockframework.runtime.extension.IMethodInvocation;
 import org.spockframework.runtime.model.ErrorInfo;
 import org.spockframework.runtime.model.MethodInfo;
 
+import static org.mockito.Mockito.*;
+
 /**
  * @author Dzmitry Mikhievich
  */
 @RunWith(MockitoJUnitRunner.class)
 public class FixtureInterceptorTest {
 
-    private static final MethodInfo testFixture = new MethodInfo();
+	private static final MethodInfo testFixture = new MethodInfo();
 
-    @Mock
-    private IMethodInvocation invocationMock;
-    @Mock
-    private ISpockService spockServiceMock;
-    @InjectMocks
-    private FixtureInterceptor fixtureInterceptor;
+	@Mock
+	private IMethodInvocation invocationMock;
+	@Mock
+	private ISpockService spockServiceMock;
+	@InjectMocks
+	private FixtureInterceptor fixtureInterceptor;
 
-    @Before
-    public void configureMocks() {
-        when(invocationMock.getMethod()).thenReturn(testFixture);
-    }
+	@Before
+	public void configureMocks() {
+		when(invocationMock.getMethod()).thenReturn(testFixture);
+	}
 
-    @Test(expected = IllegalArgumentException.class)
-    public void constructor_spockReporterIsNull() {
-        new FixtureInterceptor(null);
-    }
+	@Test(expected = IllegalArgumentException.class)
+	public void constructor_spockReporterIsNull() {
+		new FixtureInterceptor(null);
+	}
 
-    @Test
-    public void testIntercept_whenMethodInvocationThrowsException_fixtureShouldBeReportedCorrectly() throws Throwable {
-        doThrow(TestException.class).when(invocationMock).proceed();
+	@Test
+	public void testIntercept_whenMethodInvocationThrowsException_fixtureShouldBeReportedCorrectly() throws Throwable {
+		doThrow(TestException.class).when(invocationMock).proceed();
 
-        try {
-            fixtureInterceptor.intercept(invocationMock);
-        } catch (Throwable ex) {
-        }
+		try {
+			fixtureInterceptor.intercept(invocationMock);
+		} catch (Throwable ex) {
+		}
 
-        InOrder inOrder = inOrder(spockServiceMock);
-        inOrder.verify(spockServiceMock, times(1)).registerFixture(testFixture);
-        inOrder.verify(spockServiceMock, times(1)).reportError(Mockito.<ErrorInfo> any());
-        inOrder.verify(spockServiceMock, times(1)).publishFixtureResult(testFixture);
-    }
+		InOrder inOrder = inOrder(spockServiceMock);
+		inOrder.verify(spockServiceMock, times(1)).registerFixture(testFixture);
+		inOrder.verify(spockServiceMock, times(1)).reportError(Mockito.<ErrorInfo>any());
+		inOrder.verify(spockServiceMock, times(1)).publishFixtureResult(testFixture);
+	}
 
-    @Test(expected = TestException.class)
-    public void testIntercept_whenMethodInvocationThrowsException_exceptionShouldBeThrownAgain() throws Throwable {
-        doThrow(TestException.class).when(invocationMock).proceed();
+	@Test(expected = TestException.class)
+	public void testIntercept_whenMethodInvocationThrowsException_exceptionShouldBeThrownAgain() throws Throwable {
+		doThrow(TestException.class).when(invocationMock).proceed();
 
-        fixtureInterceptor.intercept(invocationMock);
-    }
+		fixtureInterceptor.intercept(invocationMock);
+	}
 
-    @Test
-    public void testIntercept_methodInvocationProceedSuccessfully() throws Throwable {
-        fixtureInterceptor.intercept(invocationMock);
+	@Test
+	public void testIntercept_methodInvocationProceedSuccessfully() throws Throwable {
+		fixtureInterceptor.intercept(invocationMock);
 
-        InOrder inOrder = inOrder(spockServiceMock);
-        inOrder.verify(spockServiceMock, times(1)).registerFixture(testFixture);
-        inOrder.verify(spockServiceMock, times(1)).publishFixtureResult(testFixture);
-        verify(spockServiceMock, times(0)).reportError(Mockito.<ErrorInfo> any());
-    }
+		InOrder inOrder = inOrder(spockServiceMock);
+		inOrder.verify(spockServiceMock, times(1)).registerFixture(testFixture);
+		inOrder.verify(spockServiceMock, times(1)).publishFixtureResult(testFixture);
+		verify(spockServiceMock, times(0)).reportError(Mockito.<ErrorInfo>any());
+	}
 
-    private static class TestException extends Throwable {
-    }
+	private static class TestException extends Throwable {
+	}
 }

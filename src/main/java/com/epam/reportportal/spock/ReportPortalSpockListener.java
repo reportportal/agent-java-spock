@@ -25,11 +25,11 @@ import java.util.function.Supplier;
  * The best approach is to have only one instance
  */
 public class ReportPortalSpockListener extends BaseSpockListener {
-    /* static instance with lazy init */
-    private static final Supplier<ISpockService> SERVICE = new MemoizingSupplier<>(SpockService::new);
+	/* static instance with lazy init */
+	private static final Supplier<ISpockService> SERVICE = new MemoizingSupplier<>(SpockService::new);
 
-    public ReportPortalSpockListener() {
-        super(SERVICE.get());
-    }
+	public ReportPortalSpockListener() {
+		super(SERVICE.get());
+	}
 
 }

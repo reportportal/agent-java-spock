@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 import org.spockframework.runtime.extension.IGlobalExtension;
 import org.spockframework.runtime.model.SpecInfo;
 
-
 /**
  * Implementation of {@link org.spockframework.runtime.extension.IGlobalExtension}, which provides the
  * integration with Report Portal.
@@ -28,26 +27,26 @@ import org.spockframework.runtime.model.SpecInfo;
  * @author Dzmitry Mikhievich
  */
 public class ReportPortalSpockExtension implements IGlobalExtension {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ReportPortalSpockExtension.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(ReportPortalSpockExtension.class);
 
-    private final BaseSpockListener reportingRunListener = new ReportPortalSpockListener();
-    private final ISpockService spockService = reportingRunListener.getSpockService();
+	private final BaseSpockListener reportingRunListener = new ReportPortalSpockListener();
+	private final ISpockService spockService = reportingRunListener.getSpockService();
 
-    @Override
-    public void start() {
-        LOGGER.info("\"LAUNCHING\" the test run");
-        spockService.startLaunch();
-    }
+	@Override
+	public void start() {
+		LOGGER.info("\"LAUNCHING\" the test run");
+		spockService.startLaunch();
+	}
 
-    @Override
-    public void visitSpec(SpecInfo spec) {
-        LOGGER.info("Visiting spec: " + spec.getName());
-        spec.addListener(reportingRunListener);
-    }
+	@Override
+	public void visitSpec(SpecInfo spec) {
+		LOGGER.info("Visiting spec: " + spec.getName());
+		spec.addListener(reportingRunListener);
+	}
 
-    @Override
-    public void stop() {
-        LOGGER.info("\"LAUNCH\" completed");
-        spockService.finishLaunch();
-    }
+	@Override
+	public void stop() {
+		LOGGER.info("\"LAUNCH\" completed");
+		spockService.finishLaunch();
+	}
 }

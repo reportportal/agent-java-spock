@@ -34,58 +34,58 @@ import static java.lang.Boolean.TRUE;
  */
 abstract class AbstractLaunchContext {
 
-    private Maybe<String> launchId;
-    private final AtomicReference<Boolean> launchInProgress = new AtomicReference<>();
+	private Maybe<String> launchId;
+	private final AtomicReference<Boolean> launchInProgress = new AtomicReference<>();
 
-    @Nullable
-    Maybe<String> getLaunchId() {
-        return launchId;
-    }
+	@Nullable
+	Maybe<String> getLaunchId() {
+		return launchId;
+	}
 
-    void setLaunchId(Maybe<String> launchId) {
-        this.launchId = launchId;
-    }
+	void setLaunchId(Maybe<String> launchId) {
+		this.launchId = launchId;
+	}
 
-    /**
-     * @return true if launch status hadn't been started previously, false
-     * otherwise
-     */
-    boolean tryStartLaunch() {
-        return launchInProgress.compareAndSet(null, TRUE);
-    }
+	/**
+	 * @return true if launch status hadn't been started previously, false
+	 * otherwise
+	 */
+	boolean tryStartLaunch() {
+		return launchInProgress.compareAndSet(null, TRUE);
+	}
 
-    /**
-     * @return true if launch status hadn't been started previously, false
-     * otherwise
-     */
-    boolean tryFinishLaunch() {
-        return launchInProgress.compareAndSet(TRUE, FALSE);
-    }
+	/**
+	 * @return true if launch status hadn't been started previously, false
+	 * otherwise
+	 */
+	boolean tryFinishLaunch() {
+		return launchInProgress.compareAndSet(TRUE, FALSE);
+	}
 
-    boolean isSpecRegistered(SpecInfo specInfo) {
-        return findSpecFootprint(specInfo) != null;
-    }
+	boolean isSpecRegistered(SpecInfo specInfo) {
+		return findSpecFootprint(specInfo) != null;
+	}
 
-    abstract void addRunningSpec(Maybe<String> id, SpecInfo specInfo);
+	abstract void addRunningSpec(Maybe<String> id, SpecInfo specInfo);
 
-    abstract void addRunningFeature(FeatureInfo featureInfo);
+	abstract void addRunningFeature(FeatureInfo featureInfo);
 
-    abstract void addRunningIteration(Maybe<String> id, IterationInfo iterationInfo);
+	abstract void addRunningIteration(Maybe<String> id, IterationInfo iterationInfo);
 
-    abstract NodeFootprint<IterationInfo> findIterationFootprint(IterationInfo iterationInfo);
+	abstract NodeFootprint<IterationInfo> findIterationFootprint(IterationInfo iterationInfo);
 
-    abstract Iterable<? extends NodeFootprint<IterationInfo>> findIterationFootprints(FeatureInfo featureInfo);
+	abstract Iterable<? extends NodeFootprint<IterationInfo>> findIterationFootprints(FeatureInfo featureInfo);
 
-    abstract NodeFootprint<SpecInfo> findSpecFootprint(SpecInfo specInfo);
+	abstract NodeFootprint<SpecInfo> findSpecFootprint(SpecInfo specInfo);
 
-    abstract Iterable<? extends NodeFootprint<SpecInfo>> findAllUnpublishedSpecFootprints();
+	abstract Iterable<? extends NodeFootprint<SpecInfo>> findAllUnpublishedSpecFootprints();
 
-    abstract IRuntimePointer getRuntimePointerForSpec(SpecInfo specInfo);
+	abstract IRuntimePointer getRuntimePointerForSpec(SpecInfo specInfo);
 
-    interface IRuntimePointer {
+	interface IRuntimePointer {
 
-        FeatureInfo getCurrentFeature();
+		FeatureInfo getCurrentFeature();
 
-        IterationInfo getCurrentIteration();
-    }
+		IterationInfo getCurrentIteration();
+	}
 }
