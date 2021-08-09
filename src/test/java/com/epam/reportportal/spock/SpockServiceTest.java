@@ -278,7 +278,6 @@ public class SpockServiceTest {
 	private static NodeFootprint createNodeFootprintMock(Maybe<String> itemId, ItemStatus status) {
 		NodeFootprint mock = mock(NodeFootprint.class);
 		when(mock.getId()).thenReturn(itemId);
-		when(mock.getStatus()).thenReturn(Optional.ofNullable(status));
 		return mock;
 	}
 

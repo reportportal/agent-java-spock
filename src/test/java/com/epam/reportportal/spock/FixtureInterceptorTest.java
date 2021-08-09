@@ -42,11 +42,6 @@ public class FixtureInterceptorTest {
 	@InjectMocks
 	private FixtureInterceptor fixtureInterceptor;
 
-	@BeforeEach
-	public void configureMocks() {
-		when(invocationMock.getMethod()).thenReturn(testFixture);
-	}
-
 	@Test
 	public void constructor_spockReporterIsNull() {
 		Assertions.assertThrows(IllegalArgumentException.class, () -> new FixtureInterceptor(null));
@@ -54,6 +49,8 @@ public class FixtureInterceptorTest {
 
 	@Test
 	public void testIntercept_whenMethodInvocationThrowsException_fixtureShouldBeReportedCorrectly() throws Throwable {
+		when(invocationMock.getMethod()).thenReturn(testFixture);
+
 		doThrow(TestException.class).when(invocationMock).proceed();
 
 		try {
@@ -69,6 +66,8 @@ public class FixtureInterceptorTest {
 
 	@Test
 	public void testIntercept_whenMethodInvocationThrowsException_exceptionShouldBeThrownAgain() throws Throwable {
+		when(invocationMock.getMethod()).thenReturn(testFixture);
+
 		doThrow(TestException.class).when(invocationMock).proceed();
 
 		Assertions.assertThrows(TestException.class, () -> fixtureInterceptor.intercept(invocationMock));
@@ -76,6 +75,8 @@ public class FixtureInterceptorTest {
 
 	@Test
 	public void testIntercept_methodInvocationProceedSuccessfully() throws Throwable {
+		when(invocationMock.getMethod()).thenReturn(testFixture);
+
 		fixtureInterceptor.intercept(invocationMock);
 
 		InOrder inOrder = inOrder(spockServiceMock);
