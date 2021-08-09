@@ -15,15 +15,16 @@
  */
 package com.epam.reportportal.spock;
 
-import static java.lang.Boolean.FALSE;
-import static java.lang.Boolean.TRUE;
-
-import java.util.concurrent.atomic.AtomicReference;
 import io.reactivex.Maybe;
 import org.spockframework.runtime.model.FeatureInfo;
 import org.spockframework.runtime.model.IterationInfo;
 import org.spockframework.runtime.model.SpecInfo;
 import org.spockframework.util.Nullable;
+
+import java.util.concurrent.atomic.AtomicReference;
+
+import static java.lang.Boolean.FALSE;
+import static java.lang.Boolean.TRUE;
 
 /**
  * Context which stores and provides the reporting meta data during the test
@@ -34,7 +35,7 @@ import org.spockframework.util.Nullable;
 abstract class AbstractLaunchContext {
 
     private Maybe<String> launchId;
-    private AtomicReference<Boolean> launchInProgress = new AtomicReference<Boolean>();
+    private final AtomicReference<Boolean> launchInProgress = new AtomicReference<>();
 
     @Nullable
     Maybe<String> getLaunchId() {
@@ -47,7 +48,7 @@ abstract class AbstractLaunchContext {
 
     /**
      * @return true if launch status hadn't been started previously, false
-     *         otherwise
+     * otherwise
      */
     boolean tryStartLaunch() {
         return launchInProgress.compareAndSet(null, TRUE);
@@ -55,7 +56,7 @@ abstract class AbstractLaunchContext {
 
     /**
      * @return true if launch status hadn't been started previously, false
-     *         otherwise
+     * otherwise
      */
     boolean tryFinishLaunch() {
         return launchInProgress.compareAndSet(TRUE, FALSE);

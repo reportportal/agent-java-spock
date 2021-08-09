@@ -1,34 +1,37 @@
 package com.epam.reportportal.spock;
 
 import com.epam.reportportal.exception.ReportPortalException;
+import com.epam.reportportal.listeners.ItemStatus;
 import com.epam.reportportal.listeners.ListenerParameters;
-import com.epam.reportportal.listeners.Statuses;
 import com.epam.reportportal.restendpoint.http.exception.RestEndpointIOException;
 import com.epam.reportportal.service.Launch;
 import com.epam.reportportal.service.LoggingContext;
 import com.epam.reportportal.service.ReportPortal;
-import com.epam.reportportal.service.ReportPortalClient;
+import com.epam.ta.reportportal.ws.model.FinishExecutionRQ;
 import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import com.epam.ta.reportportal.ws.model.issue.Issue;
 import com.epam.ta.reportportal.ws.model.launch.StartLaunchRQ;
-import com.epam.ta.reportportal.ws.model.FinishExecutionRQ;
 import io.reactivex.Maybe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spockframework.runtime.model.*;
 import org.spockframework.util.ExceptionUtil;
-import rp.com.google.common.base.Throwables;
 import rp.com.google.common.annotations.VisibleForTesting;
-import rp.com.google.common.base.Supplier;
 import rp.com.google.common.base.Optional;
+import rp.com.google.common.base.Supplier;
+import rp.com.google.common.base.Throwables;
 import rp.com.google.common.collect.ImmutableMap;
+
 import java.io.Serializable;
-import java.util.*;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.epam.reportportal.listeners.Statuses.FAILED;
-import static com.epam.reportportal.listeners.Statuses.SKIPPED;
+import static com.epam.reportportal.listeners.ItemStatus.FAILED;
+import static com.epam.reportportal.listeners.ItemStatus.SKIPPED;
 import static com.epam.reportportal.spock.NodeInfoUtils.buildIterationDescription;
 import static com.epam.reportportal.spock.NodeInfoUtils.getFixtureDisplayName;
 import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISHED;
@@ -36,77 +39,65 @@ import static org.spockframework.runtime.model.MethodKind.*;
 import static rp.com.google.common.base.Optional.fromNullable;
 import static rp.com.google.common.base.Preconditions.checkArgument;
 import static rp.com.google.common.base.Strings.isNullOrEmpty;
-import static rp.com.google.common.collect.Iterables.getFirst;
 import static rp.com.google.common.collect.Iterables.filter;
+import static rp.com.google.common.collect.Iterables.getFirst;
 
 
 /**
  * Spock service implements operations for interaction with report portal
  */
-public class SpockService implements ISpockService
-{
-    public static final String NOT_ISSUE = "NOT_ISSUE";
-    private final AtomicBoolean isLaunchFailed = new AtomicBoolean();
-    private MemoizingSupplier<Launch> launch;
+public class SpockService implements ISpockService {
     private static final Logger LOGGER = LoggerFactory.getLogger(SpockService.class);
 
+    public static final String NOT_ISSUE = "NOT_ISSUE";
+    private final AtomicBoolean isLaunchFailed = new AtomicBoolean();
+    private final MemoizingSupplier<Launch> launch;
+
     // stores the bindings of Spock method kinds to the RP-specific notation
-    private static final Map<MethodKind, String> ITEM_TYPES_REGISTRY = ImmutableMap.<MethodKind, String> builder()
+    private static final Map<MethodKind, String> ITEM_TYPES_REGISTRY = ImmutableMap.<MethodKind, String>builder()
             .put(SPEC_EXECUTION, "SUITE").put(SETUP_SPEC, "BEFORE_CLASS").put(SETUP, "BEFORE_METHOD").put(FEATURE, "TEST")
             .put(CLEANUP, "AFTER_METHOD").put(CLEANUP_SPEC, "AFTER_CLASS").build();
 
     private final AtomicBoolean rpIsDown = new AtomicBoolean(false);
     private ListenerParameters launchParameters;
     private final AbstractLaunchContext launchContext;
-    private ReportPortalClient rpClient;
     private Maybe<String> registeredFeatureId = null;
 
 
     public SpockService() {
-
         launchContext = new LaunchContextImpl();
-        this.launch = new MemoizingSupplier<Launch>(new Supplier<Launch>() {
-            @Override
-            public Launch get() {
-                //this reads property, so we want to
-                //init ReportPortal object each time Launch object is going to be created
-                final ReportPortal reportPortal = ReportPortal.builder().build();
+        this.launch = new MemoizingSupplier<>(() -> {
+            //this reads property, so we want to
+            //init ReportPortal object each time Launch object is going to be created
+            final ReportPortal reportPortal = ReportPortal.builder().build();
 
-                launchParameters = reportPortal.getParameters();
-                StartLaunchRQ rq = createStartLaunchRQ();
-                rpClient = reportPortal.getClient();
+            launchParameters = reportPortal.getParameters();
+            StartLaunchRQ rq = createStartLaunchRQ();
 
-                rq.setStartTime(Calendar.getInstance().getTime());
-                return reportPortal.newLaunch(rq);
-            }
+            rq.setStartTime(Calendar.getInstance().getTime());
+            return reportPortal.newLaunch(rq);
         });
     }
 
-    public SpockService(Supplier<Launch> launch)
-    {
+    public SpockService(Supplier<Launch> launch) {
         checkArgument(launch != null, "launch shouldn't be null");
         launchContext = new LaunchContextImpl();
-        this.launch = new MemoizingSupplier<Launch>(launch);
+        this.launch = new MemoizingSupplier<>(launch);
     }
 
-    public SpockService(Supplier<Launch> launch, AbstractLaunchContext lnchContext)
-    {
+    public SpockService(Supplier<Launch> launch, AbstractLaunchContext lnchContext) {
         checkArgument(launch != null, "launch shouldn't be null");
         launchContext = lnchContext;
-        this.launch = new MemoizingSupplier<Launch>(launch);
+        this.launch = new MemoizingSupplier<>(launch);
     }
 
     @Override
     public void startLaunch() {
-        if (launchContext.tryStartLaunch())
-        {
-            try
-            {
+        if (launchContext.tryStartLaunch()) {
+            try {
                 Maybe<String> launchId = this.launch.get().start();
                 launchContext.setLaunchId(launchId);
-            }
-            catch (RestEndpointIOException ex)
-            {
+            } catch (RestEndpointIOException ex) {
                 handleRpException(ex, "Unable start the launch: '" + launchParameters.getLaunchName() + "'");
             }
         }
@@ -129,8 +120,7 @@ public class SpockService implements ISpockService
     }
 
     @Override
-    public void registerFixture(MethodInfo fixture)
-    {
+    public void registerFixture(MethodInfo fixture) {
         if (rpIsDown.get()) {
             return;
         }
@@ -141,8 +131,7 @@ public class SpockService implements ISpockService
         MethodKind kind = fixture.getKind();
         StartTestItemRQ rq = createBaseStartTestItemRQ(fixtureDisplayName, ITEM_TYPES_REGISTRY.get(kind));
         try {
-            if(registeredFeatureId != null && kind == CLEANUP)
-            {
+            if (registeredFeatureId != null && kind == CLEANUP) {
                 LoggingContext.complete();
             }
 
@@ -197,6 +186,7 @@ public class SpockService implements ISpockService
 
         if (isMonolithicParametrizedFeature(feature)) {
             ReportableItemFootprint<IterationInfo> footprint = getFirst(launchContext.findIterationFootprints(feature), null);
+            assert footprint != null;
             reportTestItemFinish(footprint);
         } else {
             Iterable<? extends ReportableItemFootprint<IterationInfo>> iterations = launchContext.findIterationFootprints(feature);
@@ -216,11 +206,6 @@ public class SpockService implements ISpockService
         NodeFootprint ownerFootprint = findFixtureOwner(fixture);
         ReportableItemFootprint fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(fixture);
         reportTestItemFinish(fixtureFootprint);
-        MethodKind kind = fixture.getKind();
-        if(registeredFeatureId != null && kind == SETUP)
-        {
-            LoggingContext.init(registeredFeatureId, rpClient);
-        }
     }
 
     @Override
@@ -274,9 +259,11 @@ public class SpockService implements ISpockService
             LOGGER.warn("Unable to handle error of type {}", errorSourceKind);
         }
 
-        if (IS_NOT_PUBLISHED.apply(errorSourceFootprint)) {
-            errorSourceFootprint.setStatus(FAILED);
-            reportTestItemFailure(error);
+        if (errorSourceFootprint != null) {
+            if (IS_NOT_PUBLISHED.apply(errorSourceFootprint)) {
+                errorSourceFootprint.setStatus(FAILED);
+                reportTestItemFailure(error);
+            }
         }
     }
 
@@ -317,7 +304,7 @@ public class SpockService implements ISpockService
 
             // finish launch
             FinishExecutionRQ rq = createFinishExecutionRQ();
-            rq.setStatus(isLaunchFailed.get() ? Statuses.FAILED : Statuses.PASSED);
+            rq.setStatus(isLaunchFailed.get() ? ItemStatus.FAILED.name() : ItemStatus.PASSED.name());
 
             try {
                 launch.get().finish(rq);
@@ -351,41 +338,32 @@ public class SpockService implements ISpockService
         boolean failLaunch = false;
 
         // Check if test item has SKIPPED status
-        String status = "EMPTY";
-        if(footprint.getStatus().isPresent())
-        {
-            status = footprint.getStatus().get();
-        }
+        if (footprint.getStatus().isPresent()) {
+            if (SKIPPED.equals(footprint.getStatus().get())) {
+                failLaunch = true;
 
-        if(SKIPPED.equalsIgnoreCase(status))
-        {
-            failLaunch = true;
-
-            // If status is SKIPPED determine whether to investigate it or not
-            if(!fromNullable(launch.get().getParameters().getSkippedAnIssue()).or(false))
-            {
-                Issue issue = new Issue();
-                issue.setIssueType(NOT_ISSUE);
-                rq.setIssue(issue);
+                // If status is SKIPPED determine whether to investigate it or not
+                if (!fromNullable(launch.get().getParameters().getSkippedAnIssue()).or(false)) {
+                    Issue issue = new Issue();
+                    issue.setIssueType(NOT_ISSUE);
+                    rq.setIssue(issue);
+                }
             }
         }
 
+
         // Check if fixture items failed for an iteration - if so, then fail the iteration
-        if(footprint.getItem() instanceof IterationInfo)
-        {
-            List<ReportableItemFootprint<MethodInfo>> fixtures = ((NodeFootprint<IterationInfo>)footprint).getFixtures();
+        if (footprint.getItem() != null && footprint.getItem() instanceof IterationInfo) {
+            List<ReportableItemFootprint<MethodInfo>> fixtures =
+                    ((NodeFootprint<IterationInfo>) footprint).getFixtures();
 
             boolean fixtureError = false;
-            for(ReportableItemFootprint<MethodInfo> methodInfo : fixtures)
-            {
-                if(methodInfo.getItem().getKind() != CLEANUP)
-                {
-                    Optional<String> methodStatus = methodInfo.getStatus();
+            for (ReportableItemFootprint<MethodInfo> methodInfo : fixtures) {
+                if (methodInfo.getItem().getKind() != CLEANUP) {
+                    Optional<ItemStatus> methodStatus = methodInfo.getStatus();
 
-                    if (methodStatus.isPresent())
-                    {
-                        if (methodStatus.get().equalsIgnoreCase(Statuses.FAILED))
-                        {
+                    if (methodStatus.isPresent()) {
+                        if (methodStatus.get().equals(ItemStatus.FAILED)) {
                             fixtureError = true;
                             break;
                         }
@@ -393,24 +371,20 @@ public class SpockService implements ISpockService
                 }
             }
 
-            if(fixtureError)
-            {
-                footprint.setStatus(Statuses.FAILED);
+            if (fixtureError) {
+                footprint.setStatus(ItemStatus.FAILED);
                 Issue issue = new Issue();
                 issue.setIssueType(NOT_ISSUE);
                 rq.setIssue(issue);
             }
         }
 
-        String footprintStatus = calculateFootprintStatus(footprint);
-        rq.setStatus(footprintStatus);
+        ItemStatus footprintStatus = calculateFootprintStatus(footprint);
+        rq.setStatus(footprintStatus.name());
 
-        if(!failLaunch)
-        {
-            isLaunchFailed.compareAndSet(false, FAILED.equalsIgnoreCase(footprintStatus));
-        }
-        else
-        {
+        if (!failLaunch) {
+            isLaunchFailed.compareAndSet(false, FAILED.equals(footprintStatus));
+        } else {
             isLaunchFailed.set(true);
         }
 
@@ -424,8 +398,7 @@ public class SpockService implements ISpockService
     }
 
     @VisibleForTesting
-    void reportTestItemFailure(final ErrorInfo errorInfo)
-    {
+    void reportTestItemFailure(final ErrorInfo errorInfo) {
         String message = "Exception: " + ExceptionUtil.printStackTrace(errorInfo.getException());
         String level = "ERROR";
         Date time = Calendar.getInstance().getTime();
@@ -442,9 +415,6 @@ public class SpockService implements ISpockService
      * Logs error in case of {@link ReportPortalException} or
      * {@link RestEndpointIOException} or propagates exception exactly as-is, if
      * and only if it is an instance of {@link RuntimeException} or {@link Error}.
-     *
-     * @param exception
-     * @param message
      */
     private void handleException(Exception exception, String message) {
         if (exception instanceof ReportPortalException || RestEndpointIOException.class.equals(exception.getClass())) {
@@ -471,7 +441,7 @@ public class SpockService implements ISpockService
     }
 
     private IterationInfo buildIterationMaskForFeature(FeatureInfo featureInfo) {
-        IterationInfo iterationInfo = new IterationInfo(featureInfo,  new String[]{"NOT PROVIDED"}, 0);
+        IterationInfo iterationInfo = new IterationInfo(featureInfo, new String[]{"NOT PROVIDED"}, 0);
         iterationInfo.setName(featureInfo.getName());
         iterationInfo.setDescription(featureInfo.getDescription());
         return iterationInfo;
@@ -490,7 +460,9 @@ public class SpockService implements ISpockService
             startLaunchRQ.setDescription(launchParameters.getDescription());
         }
         startLaunchRQ.setStartTime(Calendar.getInstance().getTime());
-        startLaunchRQ.setTags(launchParameters.getTags());
+        if (!launchParameters.getAttributes().isEmpty()) {
+            startLaunchRQ.setAttributes(launchParameters.getAttributes());
+        }
         startLaunchRQ.setMode(launchParameters.getLaunchRunningMode());
         return startLaunchRQ;
     }
@@ -500,20 +472,19 @@ public class SpockService implements ISpockService
         rq.setName(name);
         rq.setStartTime(Calendar.getInstance().getTime());
         rq.setType(type);
-        rq.setLaunchId(launchContext.getLaunchId().blockingGet());
+        rq.setLaunchUuid(launchContext.getLaunchId().blockingGet());
         return rq;
     }
 
     @VisibleForTesting
-    static String calculateFootprintStatus(ReportableItemFootprint<?> footprint) {
-        Optional<String> footprintStatus = footprint.getStatus();
-        if (footprintStatus.isPresent()) {
-            return footprintStatus.get();
+    static ItemStatus calculateFootprintStatus(ReportableItemFootprint<?> footprint) {
+        if (footprint.getStatus().isPresent()) {
+            return footprint.getStatus().get();
         }
 
         // don't set status explicitly for footprints with descendants:
         // delegate status calculation to RP
-        return footprint.hasDescendants() ? null : Statuses.PASSED;
+        return footprint.hasDescendants() ? ItemStatus.WARN : ItemStatus.PASSED;
     }
 
     @VisibleForTesting
@@ -522,8 +493,7 @@ public class SpockService implements ISpockService
     }
 
     @VisibleForTesting
-    static class MemoizingSupplier<T> implements Supplier<T>, Serializable
-    {
+    static class MemoizingSupplier<T> implements Supplier<T>, Serializable {
         final Supplier<T> delegate;
         transient volatile boolean initialized;
         transient T value;

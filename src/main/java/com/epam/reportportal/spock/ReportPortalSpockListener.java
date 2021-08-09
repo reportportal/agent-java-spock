@@ -24,19 +24,11 @@ import rp.com.google.common.base.Suppliers;
  * Allows to have as many listener instances as needed.
  * The best approach is to have only one instance
  */
-public class ReportPortalSpockListener extends BaseSpockListener
-{
+public class ReportPortalSpockListener extends BaseSpockListener {
     /* static instance with lazy init */
-    private static final Supplier<ISpockService> SERVICE = Suppliers.memoize(new Supplier<ISpockService>()
-    {
-        @Override
-        public ISpockService get() {
-            return new SpockService();
-        }
-    });
+    private static final Supplier<ISpockService> SERVICE = Suppliers.memoize(SpockService::new);
 
-    public ReportPortalSpockListener()
-    {
+    public ReportPortalSpockListener() {
         super(SERVICE.get());
     }
 

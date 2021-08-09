@@ -15,7 +15,7 @@
  */
 package com.epam.reportportal.spock;
 
-import static com.epam.reportportal.listeners.Statuses.PASSED;
+import static com.epam.reportportal.listeners.ItemStatus.PASSED;
 import static org.apache.commons.lang3.reflect.FieldUtils.readField;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -26,6 +26,8 @@ import static org.mockito.Mockito.*;
 import static org.spockframework.runtime.model.MethodKind.CLEANUP_SPEC;
 import static org.spockframework.runtime.model.MethodKind.SETUP;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.epam.reportportal.listeners.ItemStatus;
 import com.epam.reportportal.service.Launch;
 import io.reactivex.Maybe;
 import org.junit.Before;
@@ -116,8 +118,7 @@ public class SpockServiceTest
         ArgumentCaptor<FinishTestItemRQ> requestCaptor = forClass(FinishTestItemRQ.class);
         //        when(launch.finishTestItem(any(Maybe.class), requestCaptor.capture())).thenReturn(null);
         Maybe<String> itemId = Maybe.just("Test item ID");
-        String status = "Test status";
-        ReportableItemFootprint footprintMock = createGenericFootprintMock(itemId, status);
+        ReportableItemFootprint footprintMock = createGenericFootprintMock(itemId, ItemStatus.INFO);
 
         spockService.reportTestItemFinish(footprintMock);
 
@@ -132,7 +133,7 @@ public class SpockServiceTest
         RestEndpointIOException rpException = new RestEndpointIOException("");
         doThrow(rpException).when(launch).finishTestItem(any(Maybe.class), any(FinishTestItemRQ.class));
         Maybe<String> itemId = Maybe.just("Another item ID");
-        ReportableItemFootprint footprintMock = createGenericFootprintMock(itemId, null);
+        ReportableItemFootprint footprintMock = createGenericFootprintMock(itemId, ItemStatus.INFO);
 
         spockServiceSpy.reportTestItemFinish(footprintMock);
 
@@ -207,11 +208,11 @@ public class SpockServiceTest
 
     @Test
     public void calculateFootprintStatus_footprintHasStatus() {
-        String expectedStatus = PASSED;
+        ItemStatus expectedStatus = PASSED;
         ReportableItemFootprint<?> footprint = mock(ReportableItemFootprint.class);
         when(footprint.getStatus()).thenReturn(Optional.of(expectedStatus));
 
-        String actualStatus = SpockService.calculateFootprintStatus(footprint);
+        ItemStatus actualStatus = SpockService.calculateFootprintStatus(footprint);
 
         assertThat(actualStatus, equalTo(expectedStatus));
     }
@@ -220,20 +221,20 @@ public class SpockServiceTest
     public void calculateFootprintStatus_footprintHasNoStatusAndHasDescendants() {
         ReportableItemFootprint<?> footprint = mock(ReportableItemFootprint.class);
         when(footprint.hasDescendants()).thenReturn(true);
-        when(footprint.getStatus()).thenReturn(Optional.<String> absent());
+        when(footprint.getStatus()).thenReturn(Optional.<ItemStatus> absent());
 
-        String actualStatus = SpockService.calculateFootprintStatus(footprint);
+        ItemStatus actualStatus = SpockService.calculateFootprintStatus(footprint);
 
-        assertThat(actualStatus, nullValue(String.class));
+        assertThat(actualStatus, equalTo(ItemStatus.WARN));
     }
 
     @Test
     public void calculateFootprintStatus_footprintHasNoStatusAndHasNoDescendants() {
         ReportableItemFootprint<?> footprint = mock(ReportableItemFootprint.class);
         when(footprint.hasDescendants()).thenReturn(false);
-        when(footprint.getStatus()).thenReturn(Optional.<String> absent());
+        when(footprint.getStatus()).thenReturn(Optional.<ItemStatus> absent());
 
-        String actualStatus = SpockService.calculateFootprintStatus(footprint);
+        ItemStatus actualStatus = SpockService.calculateFootprintStatus(footprint);
         // Passed by default
         assertThat(actualStatus, is(PASSED));
     }
@@ -277,14 +278,14 @@ public class SpockServiceTest
         return mock;
     }
 
-    private static ReportableItemFootprint createGenericFootprintMock(Maybe<String> itemId, @Nullable String status) {
+    private static ReportableItemFootprint createGenericFootprintMock(Maybe<String> itemId, ItemStatus status) {
         ReportableItemFootprint mock = mock(ReportableItemFootprint.class);
         when(mock.getId()).thenReturn(itemId);
         when(mock.getStatus()).thenReturn(Optional.fromNullable(status));
         return mock;
     }
 
-    private static NodeFootprint createNodeFootprintMock(Maybe<String> itemId, @Nullable String status) {
+    private static NodeFootprint createNodeFootprintMock(Maybe<String> itemId, ItemStatus status) {
         NodeFootprint mock = mock(NodeFootprint.class);
         when(mock.getId()).thenReturn(itemId);
         when(mock.getStatus()).thenReturn(Optional.fromNullable(status));
@@ -307,7 +308,6 @@ public class SpockServiceTest
     }
 
     private static void verifyErrorLogRQ(SaveLogRQ errorLogRQ, String originItemId) {
-        assertThat(errorLogRQ.getTestItemId(), equalTo(originItemId));
         assertThat(errorLogRQ.getLevel(), equalTo("ERROR"));
         assertThat(errorLogRQ.getMessage(), not(isEmptyString()));
     }

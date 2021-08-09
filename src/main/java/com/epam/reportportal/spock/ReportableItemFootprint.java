@@ -15,13 +15,13 @@
  */
 package com.epam.reportportal.spock;
 
-import static rp.com.google.common.base.Preconditions.checkArgument;
-
-import org.spockframework.util.Nullable;
+import com.epam.reportportal.listeners.ItemStatus;
+import io.reactivex.Maybe;
 import org.spockframework.runtime.model.NodeInfo;
 import rp.com.google.common.base.Optional;
 import rp.com.google.common.base.Predicate;
-import io.reactivex.Maybe;
+
+import static rp.com.google.common.base.Preconditions.checkArgument;
 
 
 /**
@@ -31,17 +31,12 @@ import io.reactivex.Maybe;
  */
 abstract class ReportableItemFootprint<T extends NodeInfo> {
 
-    static final Predicate<ReportableItemFootprint> IS_NOT_PUBLISHED = new Predicate<ReportableItemFootprint>() {
-        @Override
-        public boolean apply(@Nullable ReportableItemFootprint input) {
-            return input != null && !input.isPublished();
-        }
-    };
+    static final Predicate<ReportableItemFootprint> IS_NOT_PUBLISHED = input -> input != null && !input.isPublished();
 
     private final Maybe<String> id;
     private final T item;
 
-    private String status;
+    private ItemStatus status;
     private boolean published = false;
 
     ReportableItemFootprint(T item, Maybe<String> id) {
@@ -60,11 +55,11 @@ abstract class ReportableItemFootprint<T extends NodeInfo> {
         return id;
     }
 
-    Optional<String> getStatus() {
+    Optional<ItemStatus> getStatus() {
         return Optional.fromNullable(status);
     }
 
-    void setStatus(String status) {
+    void setStatus(ItemStatus status) {
         this.status = status;
     }
 

@@ -1,9 +1,10 @@
 package com.epam.reportportal.spock;
 
-import static rp.com.google.common.base.Preconditions.checkArgument;
 import org.spockframework.runtime.extension.IMethodInterceptor;
 import org.spockframework.runtime.extension.IMethodInvocation;
 import org.spockframework.runtime.model.ErrorInfo;
+
+import static rp.com.google.common.base.Preconditions.checkArgument;
 
 
 /**

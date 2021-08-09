@@ -15,20 +15,20 @@
  */
 package com.epam.reportportal.spock;
 
-import static rp.com.google.common.base.Strings.isNullOrEmpty;
-import static java.lang.String.format;
-import static java.util.Collections.synchronizedMap;
-import static org.spockframework.runtime.model.BlockKind.WHERE;
+import org.spockframework.runtime.model.*;
+import rp.com.google.common.annotations.VisibleForTesting;
+import rp.com.google.common.base.Predicate;
+import rp.com.google.common.base.Strings;
+import rp.com.google.common.collect.Iterables;
+import rp.com.google.common.collect.Maps;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import org.spockframework.runtime.model.*;
-import org.spockframework.util.Nullable;
-import rp.com.google.common.annotations.VisibleForTesting;
-import rp.com.google.common.base.Predicate;
-import rp.com.google.common.collect.Iterables;
-import rp.com.google.common.collect.Maps;
+
+import static java.lang.String.format;
+import static java.util.Collections.synchronizedMap;
+import static org.spockframework.runtime.model.BlockKind.WHERE;
 
 
 /**
@@ -45,24 +45,16 @@ final class NodeInfoUtils {
     private static final String BLOCK_SPLITTER = ": ";
     private static final String CONJUNCTION_KEYWORD = "And";
 
-    private static final Map<BlockKind, String> BLOCK_NAMES = synchronizedMap(Maps.<BlockKind, String> newEnumMap(BlockKind.class));
+    private static final Map<BlockKind, String> BLOCK_NAMES = synchronizedMap(Maps.newEnumMap(BlockKind.class));
 
-    private static final Predicate<BlockInfo> SKIP_BLOCK_CONDITION = new Predicate<BlockInfo>() {
-        @Override
-        public boolean apply(@Nullable BlockInfo info) {
-            if (info != null) {
-                boolean isWhereBlock = WHERE.equals(info.getKind());
-                if (isWhereBlock) {
-                    return Iterables.all(info.getTexts(), new Predicate<String>() {
-                        @Override
-                        public boolean apply(@Nullable String input) {
-                            return isNullOrEmpty(input);
-                        }
-                    });
-                }
+    private static final Predicate<BlockInfo> SKIP_BLOCK_CONDITION = info -> {
+        if (info != null) {
+            boolean isWhereBlock = WHERE.equals(info.getKind());
+            if (isWhereBlock) {
+                return Iterables.all(info.getTexts(), Strings::isNullOrEmpty);
             }
-            return false;
         }
+        return false;
     };
 
     private NodeInfoUtils() {
@@ -88,7 +80,7 @@ final class NodeInfoUtils {
                 if (!isLast) {
                     description.append(LINE_SEPARATOR);
                 }
-            } else if(isLast && description.length() > 0) {
+            } else if (isLast && description.length() > 0) {
                 int lastLineSeparatorIndex = description.lastIndexOf(LINE_SEPARATOR);
                 description.delete(lastLineSeparatorIndex, description.length());
             }
@@ -105,11 +97,11 @@ final class NodeInfoUtils {
      * Get display name of the fixture. If fixture is inherited, display name is started from the source specification name.
      *
      * @param methodInfo method info of fixture
-     * @param inherited indicates if fixture is inherited
+     * @param inherited  indicates if fixture is inherited
      * @return display name
      */
     static String getFixtureDisplayName(MethodInfo methodInfo, boolean inherited) {
-        if(methodInfo != null) {
+        if (methodInfo != null) {
             String fixtureName = methodInfo.getName();
             if (inherited) {
                 String sourceSpecName = methodInfo.getParent().getReflection().getSimpleName();
@@ -134,12 +126,14 @@ final class NodeInfoUtils {
     private static String unrollIterationDescription(IterationInfo iterationInfo, String iterationDescription) {
         List<String> parameterNames = iterationInfo.getFeature().getParameterNames();
         Object[] dataValues = iterationInfo.getDataValues();
-
-        for (int i = 0; i < parameterNames.size(); i++) {
-            Object value = dataValues[i];
-            if (value instanceof String) {
-                iterationDescription = iterationDescription
-                        .replaceAll("\\{?#" + parameterNames.get(i) + "\\}?", (String) value);
+        if (!parameterNames.isEmpty() && dataValues != null) {
+            System.out.println("----=============== SIZE: " + dataValues.length);
+            for (String parameterName : parameterNames) {
+                Object value = dataValues[0];
+                if (value instanceof String) {
+                    iterationDescription = iterationDescription
+                            .replaceAll("\\{?#" + parameterName + "}?", (String) value);
+                }
             }
         }
 
