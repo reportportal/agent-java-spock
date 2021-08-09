@@ -33,8 +33,6 @@ project.ext.limits = [
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
-description = 'Spock framework agent'
-
 repositories {
     mavenCentral()
     maven { url "https://jitpack.io" }
