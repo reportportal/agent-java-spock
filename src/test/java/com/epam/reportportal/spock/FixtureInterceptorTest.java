@@ -15,14 +15,13 @@
  */
 package com.epam.reportportal.spock;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.runners.MockitoJUnitRunner;
 import org.spockframework.runtime.extension.IMethodInvocation;
 import org.spockframework.runtime.model.ErrorInfo;
 import org.spockframework.runtime.model.MethodInfo;
@@ -32,7 +31,6 @@ import static org.mockito.Mockito.*;
 /**
  * @author Dzmitry Mikhievich
  */
-@RunWith(MockitoJUnitRunner.class)
 public class FixtureInterceptorTest {
 
 	private static final MethodInfo testFixture = new MethodInfo();
@@ -44,14 +42,14 @@ public class FixtureInterceptorTest {
 	@InjectMocks
 	private FixtureInterceptor fixtureInterceptor;
 
-	@Before
+	@BeforeEach
 	public void configureMocks() {
 		when(invocationMock.getMethod()).thenReturn(testFixture);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void constructor_spockReporterIsNull() {
-		new FixtureInterceptor(null);
+		Assertions.assertThrows(IllegalArgumentException.class, () -> new FixtureInterceptor(null));
 	}
 
 	@Test
@@ -60,7 +58,7 @@ public class FixtureInterceptorTest {
 
 		try {
 			fixtureInterceptor.intercept(invocationMock);
-		} catch (Throwable ex) {
+		} catch (Throwable ignore) {
 		}
 
 		InOrder inOrder = inOrder(spockServiceMock);
@@ -69,11 +67,11 @@ public class FixtureInterceptorTest {
 		inOrder.verify(spockServiceMock, times(1)).publishFixtureResult(testFixture);
 	}
 
-	@Test(expected = TestException.class)
+	@Test
 	public void testIntercept_whenMethodInvocationThrowsException_exceptionShouldBeThrownAgain() throws Throwable {
 		doThrow(TestException.class).when(invocationMock).proceed();
 
-		fixtureInterceptor.intercept(invocationMock);
+		Assertions.assertThrows(TestException.class, () -> fixtureInterceptor.intercept(invocationMock));
 	}
 
 	@Test

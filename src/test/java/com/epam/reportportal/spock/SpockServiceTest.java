@@ -24,14 +24,11 @@ import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import com.epam.ta.reportportal.ws.model.log.SaveLogRQ;
 import io.reactivex.Maybe;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Answers;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.*;
 import org.spockframework.runtime.model.*;
 
 import java.util.Optional;
@@ -41,9 +38,7 @@ import static com.epam.reportportal.listeners.ItemStatus.PASSED;
 import static org.apache.commons.lang3.reflect.FieldUtils.readField;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.text.IsEmptyString.isEmptyString;
 import static org.mockito.ArgumentCaptor.forClass;
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 import static org.spockframework.runtime.model.MethodKind.CLEANUP_SPEC;
 import static org.spockframework.runtime.model.MethodKind.SETUP;
@@ -51,7 +46,6 @@ import static org.spockframework.runtime.model.MethodKind.SETUP;
 /**
  * @author Dzmitry Mikhievich
  */
-@RunWith(MockitoJUnitRunner.class)
 public class SpockServiceTest {
 	@Mock
 	private Launch launch;
@@ -62,7 +56,7 @@ public class SpockServiceTest {
 	@Mock
 	private SpockService spockService;
 
-	@Before
+	@BeforeEach
 	public void preconditions() {
 		MockitoAnnotations.initMocks(this);
 
@@ -71,9 +65,9 @@ public class SpockServiceTest {
 		spockService = new SpockService(new MemoizingSupplier<>(() -> launch), launchContextMock);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void constructor_launchContextIsNull() {
-		new SpockService(null);
+		Assertions.assertThrows(IllegalArgumentException.class, () -> new SpockService(null));
 	}
 
 	@Test
@@ -84,13 +78,13 @@ public class SpockServiceTest {
 		NodeFootprint sourceSpecFootprint = createNodeFootprintMock(sourceSpecItemId, null);
 		when(launchContextMock.findSpecFootprint(sourceSpecMock)).thenReturn(sourceSpecFootprint);
 		ArgumentCaptor<StartTestItemRQ> requestCaptor = forClass(StartTestItemRQ.class);
-		when(launch.startTestItem(any(Maybe.class), requestCaptor.capture())).thenReturn(mock(Maybe.class));
+		when(launch.startTestItem(ArgumentMatchers.any(Maybe.class), requestCaptor.capture())).thenReturn(mock(Maybe.class));
 		IterationInfo iterationMock = createIterationInfoMock(sourceSpecMock);
 		when(launchContextMock.getLaunchId()).thenReturn(Maybe.just("Test Launch ID"));
 
 		spockService.reportIterationStart(iterationMock);
 
-		verify(launch, times(1)).startTestItem(eq(sourceSpecItemId), any(StartTestItemRQ.class));
+		verify(launch, times(1)).startTestItem(eq(sourceSpecItemId), ArgumentMatchers.any(StartTestItemRQ.class));
 		assertThat(requestCaptor.getValue().getType(), equalTo("TEST"));
 	}
 
@@ -118,7 +112,7 @@ public class SpockServiceTest {
 
 		spockService.reportTestItemFinish(footprintMock);
 
-		verify(launch, times(1)).finishTestItem(eq(itemId), any(FinishTestItemRQ.class));
+		verify(launch, times(1)).finishTestItem(eq(itemId), ArgumentMatchers.any(FinishTestItemRQ.class));
 		//		assertThat(requestCaptor.getValue().getStatus(), equalTo(status));
 		verify(footprintMock, times(1)).markAsPublished();
 	}
@@ -305,7 +299,7 @@ public class SpockServiceTest {
 
 	private static void verifyErrorLogRQ(SaveLogRQ errorLogRQ, String originItemId) {
 		assertThat(errorLogRQ.getLevel(), equalTo("ERROR"));
-		assertThat(errorLogRQ.getMessage(), not(isEmptyString()));
+		assertThat(errorLogRQ.getMessage(), not(Matchers.emptyString()));
 	}
 
 }

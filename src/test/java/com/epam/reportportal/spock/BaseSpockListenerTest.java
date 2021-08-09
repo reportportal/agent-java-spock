@@ -18,12 +18,11 @@ package com.epam.reportportal.spock;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
-import org.mockito.runners.MockitoJUnitRunner;
 import org.spockframework.runtime.extension.IMethodInterceptor;
 import org.spockframework.runtime.model.*;
 
@@ -36,21 +35,20 @@ import static org.mockito.Mockito.*;
 /**
  * @author Dzmitry Mikhievich
  */
-@RunWith(MockitoJUnitRunner.class)
 public class BaseSpockListenerTest {
 	private SpockService spockServiceMock;
 
 	private BaseSpockListener runListener;
 
-	@Before
+	@BeforeEach
 	public void init() {
 		spockServiceMock = Mockito.mock(SpockService.class);
 		runListener = new BaseSpockListener(spockServiceMock);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void constructor_nullReporter() {
-		new BaseSpockListener(null);
+		Assertions.assertThrows(IllegalArgumentException.class, () -> new BaseSpockListener(null));
 	}
 
 	@Test

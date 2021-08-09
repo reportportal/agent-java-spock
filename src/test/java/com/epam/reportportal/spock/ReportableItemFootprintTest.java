@@ -15,7 +15,7 @@
  */
 package com.epam.reportportal.spock;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISHED;
 import static org.hamcrest.CoreMatchers.is;
