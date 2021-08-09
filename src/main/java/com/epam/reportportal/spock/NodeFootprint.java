@@ -15,14 +15,14 @@
  */
 package com.epam.reportportal.spock;
 
-import com.google.common.base.Predicate;
 import io.reactivex.Maybe;
 import org.spockframework.runtime.model.MethodInfo;
 import org.spockframework.runtime.model.NodeInfo;
 
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.function.Predicate;
 
-import static com.google.common.collect.Iterables.find;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Lists.newArrayListWithCapacity;
 
@@ -50,7 +50,7 @@ abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFootprint
 
 	ReportableItemFootprint<MethodInfo> findFixtureFootprint(final MethodInfo fixture) {
 		Predicate<ReportableItemFootprint<MethodInfo>> criteria = createFixtureMatchPredicate(fixture);
-		return find(getFixtures(), criteria);
+		return  getFixtures().stream().filter(criteria).findAny().orElseThrow(NoSuchElementException::new);
 	}
 
 	/**
@@ -61,8 +61,8 @@ abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFootprint
 	 * @return footprint
 	 */
 	ReportableItemFootprint<MethodInfo> findUnpublishedFixtureFootprint(final MethodInfo fixture) {
-		Predicate<ReportableItemFootprint<MethodInfo>> criteria = and(createFixtureMatchPredicate(fixture), IS_NOT_PUBLISHED);
-		return find(getFixtures(), criteria);
+		Predicate<ReportableItemFootprint<MethodInfo>> criteria = createFixtureMatchPredicate(fixture).and(IS_NOT_PUBLISHED);
+		return getFixtures().stream().filter(criteria).findAny().orElseThrow(NoSuchElementException::new);
 	}
 
 	void addFixtureFootprint(FixtureFootprint footprint) {

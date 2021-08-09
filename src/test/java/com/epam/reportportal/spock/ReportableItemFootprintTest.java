@@ -33,7 +33,7 @@ public class ReportableItemFootprintTest {
 		ReportableItemFootprint itemMock = mock(ReportableItemFootprint.class);
 		when(itemMock.isPublished()).thenReturn(true);
 
-		boolean actualResult = IS_NOT_PUBLISHED.apply(itemMock);
+		boolean actualResult = IS_NOT_PUBLISHED.test(itemMock);
 		assertThat(actualResult, is(false));
 	}
 
@@ -42,13 +42,13 @@ public class ReportableItemFootprintTest {
 		ReportableItemFootprint itemMock = mock(ReportableItemFootprint.class);
 		when(itemMock.isPublished()).thenReturn(false);
 
-		boolean actualResult = IS_NOT_PUBLISHED.apply(itemMock);
+		boolean actualResult = IS_NOT_PUBLISHED.test(itemMock);
 		assertThat(actualResult, is(true));
 	}
 
 	@Test
 	public void isNotPublishedCondition_nullItemIsPassed() {
-		boolean actualResult = IS_NOT_PUBLISHED.apply(null);
+		boolean actualResult = IS_NOT_PUBLISHED.test(null);
 		assertThat(actualResult, is(false));
 	}
 }
