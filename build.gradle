@@ -1,6 +1,34 @@
-plugins {
-    id "java"
-}
+/*
+ * Copyright 2021 EPAM Systems
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+apply plugin: 'java-library'
+
+apply from: "${project.scripts_url}/${project.scripts_branch}/build-quality.gradle"
+apply from: "${project.scripts_url}/${project.scripts_branch}/release-commons.gradle"
+apply from: "${project.scripts_url}/${project.scripts_branch}/signing.gradle"
+apply from: "${project.scripts_url}/${project.scripts_branch}/jacoco.gradle"
+
+project.ext.limits = [
+        'instruction': 70,
+        'branch'     : 53,
+        'line'       : 75,
+        'complexity' : 60,
+        'method'     : 65,
+        'class'      : 90
+]
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -9,6 +37,7 @@ description = 'Spock framework agent'
 
 repositories {
     mavenCentral()
+    maven { url "https://jitpack.io" }
 }
 
 dependencies {
@@ -20,3 +49,28 @@ dependencies {
     testImplementation 'pl.pragmatists:JUnitParams:1.1.1'
     testImplementation 'org.apache.commons:commons-lang3:3.12.0'
 }
+
+test {
+    outputs.upToDateWhen { return false }
+    useJUnitPlatform()
+    maxParallelForks(5) // it's forks - separate JVMs, should not interfere each other
+    forkEvery(1)
+    doFirst {
+        def weaver = configurations.testRuntimeClasspath.find { it.name.contains("aspectjweaver") }
+        jvmArgs += "-javaagent:$weaver"
+    }
+    environment "AGENT_NO_ANALYTICS", "1"
+    testLogging.exceptionFormat = 'full'
+}
+
+wrapper {
+    gradleVersion = '5.4.1'
+}
+
+processResources {
+    filesMatching('agent.properties') {
+        expand(project.properties)
+    }
+}
+
+build.dependsOn jacocoTestReport
