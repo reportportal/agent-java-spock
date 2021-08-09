@@ -19,16 +19,17 @@ import io.reactivex.Maybe;
 import org.spockframework.runtime.model.FeatureInfo;
 import org.spockframework.runtime.model.IterationInfo;
 import org.spockframework.runtime.model.SpecInfo;
-import rp.com.google.common.collect.Iterables;
-import rp.com.google.common.collect.Lists;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 import java.util.List;
 import java.util.Map;
+
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static com.epam.reportportal.spock.NodeInfoUtils.getSpecIdentifier;
 import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISHED;
-import static rp.com.google.common.collect.Iterables.filter;
 
 
 /**
@@ -100,7 +101,7 @@ class LaunchContextImpl extends AbstractLaunchContext {
 
     @Override
     public Iterable<Specification> findAllUnpublishedSpecFootprints() {
-        return filter(specFootprintsRegistry.values(), IS_NOT_PUBLISHED);
+        return specFootprintsRegistry.values().stream().filter(IS_NOT_PUBLISHED).collect(Collectors.toList());
     }
 
     @Override

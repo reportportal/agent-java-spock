@@ -18,14 +18,14 @@ package com.epam.reportportal.spock;
 import io.reactivex.Maybe;
 import org.spockframework.runtime.model.MethodInfo;
 import org.spockframework.runtime.model.NodeInfo;
-import rp.com.google.common.base.Predicate;
+import com.google.common.base.Predicate;
 
 import java.util.List;
 
-import static rp.com.google.common.base.Predicates.and;
-import static rp.com.google.common.collect.Iterables.find;
-import static rp.com.google.common.collect.Lists.newArrayList;
-import static rp.com.google.common.collect.Lists.newArrayListWithCapacity;
+import static com.google.common.base.Predicates.and;
+import static com.google.common.collect.Iterables.find;
+import static com.google.common.collect.Lists.newArrayList;
+import static com.google.common.collect.Lists.newArrayListWithCapacity;
 
 
 /**

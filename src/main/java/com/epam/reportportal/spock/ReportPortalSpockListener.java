@@ -15,9 +15,9 @@
  */
 package com.epam.reportportal.spock;
 
-import rp.com.google.common.base.Supplier;
-import rp.com.google.common.base.Suppliers;
+import com.epam.reportportal.utils.MemoizingSupplier;
 
+import java.util.function.Supplier;
 
 /**
  * Backward-compatible version of Listeners with version prior to 3.0.0
@@ -26,7 +26,7 @@ import rp.com.google.common.base.Suppliers;
  */
 public class ReportPortalSpockListener extends BaseSpockListener {
     /* static instance with lazy init */
-    private static final Supplier<ISpockService> SERVICE = Suppliers.memoize(SpockService::new);
+    private static final Supplier<ISpockService> SERVICE = new MemoizingSupplier<>(SpockService::new);
 
     public ReportPortalSpockListener() {
         super(SERVICE.get());

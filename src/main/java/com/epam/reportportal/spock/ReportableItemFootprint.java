@@ -18,10 +18,11 @@ package com.epam.reportportal.spock;
 import com.epam.reportportal.listeners.ItemStatus;
 import io.reactivex.Maybe;
 import org.spockframework.runtime.model.NodeInfo;
-import rp.com.google.common.base.Optional;
-import rp.com.google.common.base.Predicate;
 
-import static rp.com.google.common.base.Preconditions.checkArgument;
+import java.util.Optional;
+import java.util.function.Predicate;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 
 /**
@@ -56,7 +57,7 @@ abstract class ReportableItemFootprint<T extends NodeInfo> {
     }
 
     Optional<ItemStatus> getStatus() {
-        return Optional.fromNullable(status);
+        return Optional.ofNullable(status);
     }
 
     void setStatus(ItemStatus status) {

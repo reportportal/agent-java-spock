@@ -22,7 +22,7 @@ import org.spockframework.runtime.model.*;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static rp.com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkArgument;
 
 
 /**

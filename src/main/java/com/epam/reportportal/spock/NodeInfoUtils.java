@@ -16,11 +16,11 @@
 package com.epam.reportportal.spock;
 
 import org.spockframework.runtime.model.*;
-import rp.com.google.common.annotations.VisibleForTesting;
-import rp.com.google.common.base.Predicate;
-import rp.com.google.common.base.Strings;
-import rp.com.google.common.collect.Iterables;
-import rp.com.google.common.collect.Maps;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 
 import java.util.Iterator;
 import java.util.List;
