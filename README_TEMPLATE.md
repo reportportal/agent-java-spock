@@ -49,9 +49,9 @@ ext {
     drivers = ["chrome", "firefox", "ie"]
 
     ext {
-        groovyVersion = '2.4'
-        gebVersion = '1.0'
-        seleniumVersion = '3.0.1'
+        groovyVersion = '2.5.14'
+        gebVersion = '4.1'
+        seleniumVersion = '3.141.59'
     }
 }
 ```
@@ -70,15 +70,9 @@ repositories {
 
 *ReportPortal agent implementation for Spock framework*
 ```gradle
-testCompile 'com.epam.reportportal:agent-java-spock:2.6.0'
+testCompile 'com.epam.reportportal:agent-java-spock:$LATEST_VERSION'
 ```
 
-> Latest version of the agent, could be found [here](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22agent-java-spock%22)
-
-*ReportPortal java client*
-```gradle
-compile 'com.epam.reportportal:client-java-core:2.7.1'
-```
 *Selenium support*
 ```gradle
 testCompile "org.seleniumhq.selenium:selenium-support:$seleniumVersion"
@@ -99,7 +93,7 @@ testCompile "org.codehaus.groovy:groovy-all:$groovyVersion"
 ```
 *Spock framework dependency*
 ```gradle
-testCompile ("org.spockframework:spock-core:1.0-groovy-2.4") {
+testCompile ("org.spockframework:spock-core:1.3-groovy-2.5") {
     exclude group: "org.codehaus.groovy"
 }
 ```
@@ -111,28 +105,28 @@ If you prefer using *Logback* logging library, add following dependencies:
 
 *ReportPortal logback logger dependency*
 ```gradle
-testCompile 'com.epam.reportportal:logger-java-logback:2.6.0'
+testCompile 'com.epam.reportportal:logger-java-logback:5.0.3'
 ```
 
 > Up to date version could be found [here](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22logger-java-logback%22)
 
 *The logback itself*
 ```gradle
-compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.2'
+compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
 ```
 
 If you prefer using *Log4j* logging library, add following dependencies:
 
 *ReportPortal log4j logger dependency*
 ```gradle
-testCompile 'com.epam.reportportal:logger-java-log4j:4.0.1'
+testCompile 'com.epam.reportportal:logger-java-log4j:5.0.3'
 ```
 > Up to date version could be found [here](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22logger-java-log4j%22)
 
 *The log4j itself*
 ```gradle
-compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.10.0'
-compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.10.0'
+compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.13.2'
+compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.13.2'
 ```
 
 #### 2.4 Create gradle tasks for tests
@@ -172,9 +166,9 @@ ext {
     drivers = ["chrome", "firefox", "ie"]
 
     ext {
-        groovyVersion = '2.4'
-        gebVersion = '1.0'
-        seleniumVersion = '3.0.1'
+        groovyVersion = '2.5.14'
+        gebVersion = '4.1'
+        seleniumVersion = '3.141.59'
     }
 }
 
@@ -185,16 +179,15 @@ repositories {
 }
 
 dependencies {
-    testCompile 'com.epam.reportportal:agent-java-spock:2.6.0'
-    testCompile 'com.epam.reportportal:logger-java-logback:2.6.0'
-    compile 'com.epam.reportportal:client-java-core:2.7.1'
+    testCompile 'com.epam.reportportal:agent-java-spock:$LATEST_VERSION'
+    testCompile 'com.epam.reportportal:logger-java-logback:5.0.3'
 
-    testCompile "org.seleniumhq.selenium:selenium-support:3.0.1"
+    testCompile "org.seleniumhq.selenium:selenium-support:$seleniumVersion"
     testCompile "org.gebish:geb-spock:$gebVersion"
     testCompile "org.gebish:geb-junit4:$gebVersion"
     testCompile "org.codehaus.groovy:groovy-all:$groovyVersion"
 
-    testCompile ("org.spockframework:spock-core:1.0-groovy-2.4") {
+    testCompile ("org.spockframework:spock-core:1.3-groovy-2.5") {
         exclude group: "org.codehaus.groovy"
     }
 
@@ -202,7 +195,7 @@ dependencies {
     testCompile "org.seleniumhq.selenium:selenium-firefox-driver:$seleniumVersion"
     testCompile "org.seleniumhq.selenium:selenium-ie-driver:$seleniumVersion"
 
-    compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.2'
+    compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
 }
 
 drivers.each { driver ->
@@ -439,7 +432,7 @@ Returning back to the code. In your project, create file named `reportportal.pro
 [resources/reportportal.properties]
 
 rp.endpoint = http://localhost:8080
-rp.uuid = 4aca8475-c4b4-4904-ae2d-c954897e9b62
+rp.uuid = your_reportportal_api_key
 rp.launch = robin_tests
 rp.project = my_cool_project
 rp.enable = true
