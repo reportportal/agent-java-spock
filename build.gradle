@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
+apply plugin: "groovy"
 apply plugin: 'java-library'
 
 apply from: "${project.scripts_url}/${project.scripts_branch}/build-quality.gradle"
 apply from: "${project.scripts_url}/${project.scripts_branch}/release-commons.gradle"
-apply from: "${project.scripts_url}/${project.scripts_branch}/signing.gradle"
+//apply from: "${project.scripts_url}/${project.scripts_branch}/signing.gradle"
 apply from: "${project.scripts_url}/${project.scripts_branch}/jacoco.gradle"
 
 project.ext.limits = [
@@ -45,10 +46,12 @@ dependencies {
     api 'com.google.code.findbugs:jsr305:3.0.2'
     implementation 'org.slf4j:slf4j-api:1.7.25'
 
+    testImplementation 'org.codehaus.groovy:groovy:2.5.14'
     testImplementation 'com.github.reportportal:agent-java-test-utils:3d4d206'
     testImplementation 'org.aspectj:aspectjweaver:1.9.2'
     testImplementation 'org.hamcrest:hamcrest-core:2.2'
     testImplementation "org.mockito:mockito-core:${mockito_version}"
+    testImplementation "org.mockito:mockito-inline:${mockito_version}"
     testImplementation "org.mockito:mockito-junit-jupiter:${mockito_version}"
     testImplementation 'ch.qos.logback:logback-classic:1.2.3'
     testImplementation 'com.epam.reportportal:logger-java-logback:5.0.3'

@@ -33,6 +33,7 @@ import org.spockframework.runtime.model.*;
 
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import static com.epam.reportportal.listeners.ItemStatus.PASSED;
 import static org.apache.commons.lang3.reflect.FieldUtils.readField;
@@ -67,7 +68,7 @@ public class SpockServiceTest {
 
 	@Test
 	public void constructor_launchContextIsNull() {
-		Assertions.assertThrows(IllegalArgumentException.class, () -> new SpockService(null));
+		Assertions.assertThrows(IllegalArgumentException.class, () -> new SpockService((Supplier<Launch>) null));
 	}
 
 	@Test

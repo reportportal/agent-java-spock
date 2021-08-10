@@ -29,8 +29,17 @@ import org.spockframework.runtime.model.SpecInfo;
 public class ReportPortalSpockExtension implements IGlobalExtension {
 	private static final Logger LOGGER = LoggerFactory.getLogger(ReportPortalSpockExtension.class);
 
-	private final BaseSpockListener reportingRunListener = new ReportPortalSpockListener();
-	private final ISpockService spockService = reportingRunListener.getSpockService();
+	private final BaseSpockListener reportingRunListener;
+	private final ISpockService spockService;
+
+	public ReportPortalSpockExtension(ReportPortalSpockListener listener) {
+		reportingRunListener = listener;
+		spockService = reportingRunListener.getSpockService();
+	}
+
+	public ReportPortalSpockExtension() {
+		this(new ReportPortalSpockListener());
+	}
 
 	@Override
 	public void start() {

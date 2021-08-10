@@ -62,12 +62,12 @@ public class SpockService implements ISpockService {
 	private Maybe<String> registeredFeatureId = null;
 
 	public SpockService() {
+		this(ReportPortal.builder().build());
+	}
+
+	public SpockService(final ReportPortal reportPortal) {
 		launchContext = new LaunchContextImpl();
 		this.launch = new MemoizingSupplier<>(() -> {
-			//this reads property, so we want to
-			//init ReportPortal object each time Launch object is going to be created
-			final ReportPortal reportPortal = ReportPortal.builder().build();
-
 			launchParameters = reportPortal.getParameters();
 			StartLaunchRQ rq = createStartLaunchRQ();
 
@@ -82,9 +82,9 @@ public class SpockService implements ISpockService {
 		this.launch = new MemoizingSupplier<>(launch);
 	}
 
-	public SpockService(Supplier<Launch> launch, AbstractLaunchContext lnchContext) {
+	public SpockService(Supplier<Launch> launch, AbstractLaunchContext launchContext) {
 		checkArgument(launch != null, "launch shouldn't be null");
-		launchContext = lnchContext;
+		this.launchContext = launchContext;
 		this.launch = new MemoizingSupplier<>(launch);
 	}
 

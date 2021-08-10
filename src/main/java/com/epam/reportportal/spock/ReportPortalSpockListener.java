@@ -29,7 +29,10 @@ public class ReportPortalSpockListener extends BaseSpockListener {
 	private static final Supplier<ISpockService> SERVICE = new MemoizingSupplier<>(SpockService::new);
 
 	public ReportPortalSpockListener() {
-		super(SERVICE.get());
+		this(SERVICE.get());
 	}
 
+	public ReportPortalSpockListener(final ISpockService service) {
+		super(service);
+	}
 }
