@@ -18,15 +18,13 @@ package com.epam.reportportal.spock;
 import io.reactivex.Maybe;
 import org.spockframework.runtime.model.MethodInfo;
 import org.spockframework.runtime.model.NodeInfo;
-import rp.com.google.common.base.Predicate;
 
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.function.Predicate;
 
-import static rp.com.google.common.base.Predicates.and;
-import static rp.com.google.common.collect.Iterables.find;
-import static rp.com.google.common.collect.Lists.newArrayList;
-import static rp.com.google.common.collect.Lists.newArrayListWithCapacity;
-
+import static com.google.common.collect.Lists.newArrayList;
+import static com.google.common.collect.Lists.newArrayListWithCapacity;
 
 /**
  * Abstract entity for the representation of the metadata for the reportable
@@ -36,46 +34,46 @@ import static rp.com.google.common.collect.Lists.newArrayListWithCapacity;
  */
 abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFootprint<T> {
 
-    /*
-     * Approximate fixtures count, which should match most cases. This is
-     * a kind of "happy medium" between memory consumption and potential
-     * performance drawback on arrays coping
-     */
-    private static final int APPROXIMATE_CAPACITY = 4;
+	/*
+	 * Approximate fixtures count, which should match most cases. This is
+	 * a kind of "happy medium" between memory consumption and potential
+	 * performance drawback on arrays coping
+	 */
+	private static final int APPROXIMATE_CAPACITY = 4;
 
-    private final List<ReportableItemFootprint<MethodInfo>> fixtures;
+	private final List<ReportableItemFootprint<MethodInfo>> fixtures;
 
-    NodeFootprint(T nodeInfo, Maybe<String> id) {
-        super(nodeInfo, id);
-        fixtures = newArrayListWithCapacity(APPROXIMATE_CAPACITY);
-    }
+	NodeFootprint(T nodeInfo, Maybe<String> id) {
+		super(nodeInfo, id);
+		fixtures = newArrayListWithCapacity(APPROXIMATE_CAPACITY);
+	}
 
-    ReportableItemFootprint<MethodInfo> findFixtureFootprint(final MethodInfo fixture) {
-        Predicate<ReportableItemFootprint<MethodInfo>> criteria = createFixtureMatchPredicate(fixture);
-        return find(getFixtures(), criteria);
-    }
+	ReportableItemFootprint<MethodInfo> findFixtureFootprint(final MethodInfo fixture) {
+		Predicate<ReportableItemFootprint<MethodInfo>> criteria = createFixtureMatchPredicate(fixture);
+		return  getFixtures().stream().filter(criteria).findAny().orElseThrow(NoSuchElementException::new);
+	}
 
-    /**
-     * Find unpublished fixture footprint. It used to address an issue, when the node footprint can have multiple fixture
-     * footprint, wrapping the same {@link MethodInfo}
-     *
-     * @param fixture target method info
-     * @return footprint
-     */
-    ReportableItemFootprint<MethodInfo> findUnpublishedFixtureFootprint(final MethodInfo fixture) {
-        Predicate<ReportableItemFootprint<MethodInfo>> criteria = and(createFixtureMatchPredicate(fixture), IS_NOT_PUBLISHED);
-        return find(getFixtures(), criteria);
-    }
+	/**
+	 * Find unpublished fixture footprint. It used to address an issue, when the node footprint can have multiple fixture
+	 * footprint, wrapping the same {@link MethodInfo}
+	 *
+	 * @param fixture target method info
+	 * @return footprint
+	 */
+	ReportableItemFootprint<MethodInfo> findUnpublishedFixtureFootprint(final MethodInfo fixture) {
+		Predicate<ReportableItemFootprint<MethodInfo>> criteria = createFixtureMatchPredicate(fixture).and(IS_NOT_PUBLISHED);
+		return getFixtures().stream().filter(criteria).findAny().orElseThrow(NoSuchElementException::new);
+	}
 
-    void addFixtureFootprint(FixtureFootprint footprint) {
-        fixtures.add(footprint);
-    }
+	void addFixtureFootprint(FixtureFootprint footprint) {
+		fixtures.add(footprint);
+	}
 
-    List<ReportableItemFootprint<MethodInfo>> getFixtures() {
-        return newArrayList(fixtures);
-    }
+	List<ReportableItemFootprint<MethodInfo>> getFixtures() {
+		return newArrayList(fixtures);
+	}
 
-    private static Predicate<ReportableItemFootprint<MethodInfo>> createFixtureMatchPredicate(final MethodInfo fixture) {
-        return footprint -> footprint != null && fixture.equals(footprint.getItem());
-    }
+	private static Predicate<ReportableItemFootprint<MethodInfo>> createFixtureMatchPredicate(final MethodInfo fixture) {
+		return footprint -> footprint != null && fixture.equals(footprint.getItem());
+	}
 }

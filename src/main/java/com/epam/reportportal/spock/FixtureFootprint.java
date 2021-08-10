@@ -25,12 +25,12 @@ import org.spockframework.runtime.model.MethodInfo;
  */
 class FixtureFootprint extends ReportableItemFootprint<MethodInfo> {
 
-    FixtureFootprint(MethodInfo item, Maybe<String> id) {
-        super(item, id);
-    }
+	FixtureFootprint(MethodInfo item, Maybe<String> id) {
+		super(item, id);
+	}
 
-    @Override
-    public boolean hasDescendants() {
-        return false;
-    }
+	@Override
+	public boolean hasDescendants() {
+		return false;
+	}
 }
