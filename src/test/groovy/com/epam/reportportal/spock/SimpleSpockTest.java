@@ -17,7 +17,6 @@
 package com.epam.reportportal.spock;
 
 import com.epam.reportportal.listeners.ItemType;
-
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.features.HelloSpockSpec;
@@ -26,11 +25,9 @@ import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.junit.jupiter.api.BeforeEach;
-
 import org.junit.jupiter.api.Test;
 import org.junit.runner.Result;
 import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
 
 import java.util.Collections;
 import java.util.List;
@@ -38,9 +35,9 @@ import java.util.List;
 import static com.epam.reportportal.spock.utils.TestUtils.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.same;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 public class SimpleSpockTest {
 
@@ -53,16 +50,15 @@ public class SimpleSpockTest {
 	public void setupMock() {
 		TestUtils.mockLaunch(client, null, classId, methodId);
 		TestUtils.mockBatchLogging(client);
-		SpockService service = new SpockService(ReportPortal.create(client,
-				standardParameters(),
-				testExecutor()
-		));
+		SpockService service = new SpockService(ReportPortal.create(client, standardParameters(), testExecutor()));
 		CodRefExtension.listener = new ReportPortalSpockListener(service);
 	}
 
 	@Test
 	public void verify_static_test_code_reference_generation() {
 		Result result = runClasses(Collections.singletonList(CodRefExtension.class), HelloSpockSpec.class);
+
+		assertThat(result.getFailureCount(), equalTo(0));
 
 		ArgumentCaptor<StartTestItemRQ> captor = ArgumentCaptor.forClass(StartTestItemRQ.class);
 		verify(client).startTestItem(captor.capture());
@@ -76,10 +72,8 @@ public class SimpleSpockTest {
 
 		assertThat(classRq.getCodeRef(), allOf(notNullValue(), equalTo(HelloSpockSpec.class.getCanonicalName())));
 		assertThat(classRq.getType(), allOf(notNullValue(), equalTo(ItemType.TEST.name())));
-		assertThat(testRq.getCodeRef(),
-				allOf(notNullValue(),
-						equalTo(HelloSpockSpec.class.getCanonicalName() + "." + HelloSpockSpec.class.getDeclaredMethods()[0].getName())
-				)
-		);
+		assertThat(testRq.getCodeRef(), allOf(notNullValue(),
+				equalTo(HelloSpockSpec.class.getCanonicalName() + "." + HelloSpockSpec.class.getDeclaredMethods()[0].getName())
+		));
 	}
 }
