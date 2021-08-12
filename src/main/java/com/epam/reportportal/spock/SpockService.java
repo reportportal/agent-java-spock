@@ -56,7 +56,6 @@ public class SpockService implements ISpockService {
 			.put(CLEANUP_SPEC, "AFTER_CLASS")
 			.build();
 
-	private final AtomicBoolean rpIsDown = new AtomicBoolean(false);
 	private ListenerParameters launchParameters;
 	private final AbstractLaunchContext launchContext;
 	private Maybe<String> registeredFeatureId = null;
@@ -102,7 +101,7 @@ public class SpockService implements ISpockService {
 
 	@Override
 	public void registerSpec(SpecInfo spec) {
-		if (rpIsDown.get() || launchContext.isSpecRegistered(spec)) {
+		if (launchContext.isSpecRegistered(spec)) {
 			return;
 		}
 
@@ -118,10 +117,6 @@ public class SpockService implements ISpockService {
 
 	@Override
 	public void registerFixture(MethodInfo fixture) {
-		if (rpIsDown.get()) {
-			return;
-		}
-
 		NodeFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(fixture.getParent());
 		boolean isFixtureInherited = !fixture.getParent().equals(specFootprint.getItem());
 		String fixtureDisplayName = getFixtureDisplayName(fixture, isFixtureInherited);
@@ -142,10 +137,6 @@ public class SpockService implements ISpockService {
 
 	@Override
 	public void registerFeature(FeatureInfo feature) {
-		if (rpIsDown.get()) {
-			return;
-		}
-
 		launchContext.addRunningFeature(feature);
 		if (isMonolithicParametrizedFeature(feature) && !feature.isSkipped()) {
 			IterationInfo maskedIteration = buildIterationMaskForFeature(feature);
@@ -155,7 +146,7 @@ public class SpockService implements ISpockService {
 
 	@Override
 	public void registerIteration(IterationInfo iteration) {
-		if (rpIsDown.get() || isMonolithicParametrizedFeature(iteration.getFeature())) {
+		if (isMonolithicParametrizedFeature(iteration.getFeature())) {
 			return;
 		}
 		reportIterationStart(iteration);
@@ -163,10 +154,6 @@ public class SpockService implements ISpockService {
 
 	@Override
 	public void publishIterationResult(IterationInfo iteration) {
-		if (rpIsDown.get()) {
-			return;
-		}
-
 		FeatureInfo feature = iteration.getFeature();
 		if (!isMonolithicParametrizedFeature(feature)) {
 			ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(iteration);
@@ -177,10 +164,6 @@ public class SpockService implements ISpockService {
 
 	@Override
 	public void publishFeatureResult(FeatureInfo feature) {
-		if (rpIsDown.get()) {
-			return;
-		}
-
 		if (isMonolithicParametrizedFeature(feature)) {
 			ReportableItemFootprint<IterationInfo> footprint = getFirst(launchContext.findIterationFootprints(feature), null);
 			assert footprint != null;
@@ -195,10 +178,6 @@ public class SpockService implements ISpockService {
 
 	@Override
 	public void publishFixtureResult(MethodInfo fixture) {
-		if (rpIsDown.get()) {
-			return;
-		}
-
 		NodeFootprint ownerFootprint = findFixtureOwner(fixture);
 		ReportableItemFootprint fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(fixture);
 		reportTestItemFinish(fixtureFootprint);
@@ -206,20 +185,12 @@ public class SpockService implements ISpockService {
 
 	@Override
 	public void publishSpecResult(SpecInfo spec) {
-		if (rpIsDown.get()) {
-			return;
-		}
-
 		ReportableItemFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
 		reportTestItemFinish(specFootprint);
 	}
 
 	@Override
 	public void reportError(ErrorInfo error) {
-		if (rpIsDown.get()) {
-			return;
-		}
-
 		MethodInfo errorSource = error.getMethod();
 		SpecInfo sourceSpec = errorSource.getParent();
 		MethodKind errorSourceKind = errorSource.getKind();
@@ -265,10 +236,6 @@ public class SpockService implements ISpockService {
 
 	@Override
 	public void trackSkippedFeature(FeatureInfo featureInfo) {
-		if (rpIsDown.get()) {
-			return;
-		}
-
 		IterationInfo maskedIteration = buildIterationMaskForFeature(featureInfo);
 		reportIterationStart(maskedIteration);
 		// set skipped status in an appropriate footprint
@@ -280,10 +247,6 @@ public class SpockService implements ISpockService {
 
 	@Override
 	public void trackSkippedSpec(SpecInfo spec) {
-		if (rpIsDown.get()) {
-			return;
-		}
-
 		registerSpec(spec);
 		ReportableItemFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
 		specFootprint.setStatus(SKIPPED);
@@ -401,7 +364,6 @@ public class SpockService implements ISpockService {
 
 	@VisibleForTesting
 	void handleRpException(ReportPortalException rpException, String message) {
-		rpIsDown.set(true);
 		handleException(rpException, message);
 	}
 
