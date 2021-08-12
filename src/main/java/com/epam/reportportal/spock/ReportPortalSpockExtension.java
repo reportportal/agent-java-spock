@@ -29,12 +29,10 @@ import org.spockframework.runtime.model.SpecInfo;
 public class ReportPortalSpockExtension implements IGlobalExtension {
 	private static final Logger LOGGER = LoggerFactory.getLogger(ReportPortalSpockExtension.class);
 
-	private final BaseSpockListener reportingRunListener;
-	private final ISpockService spockService;
+	private final ReportPortalSpockListener reportingRunListener;
 
 	public ReportPortalSpockExtension(ReportPortalSpockListener listener) {
 		reportingRunListener = listener;
-		spockService = reportingRunListener.getSpockService();
 	}
 
 	public ReportPortalSpockExtension() {
@@ -44,7 +42,7 @@ public class ReportPortalSpockExtension implements IGlobalExtension {
 	@Override
 	public void start() {
 		LOGGER.info("\"LAUNCHING\" the test run");
-		spockService.startLaunch();
+		reportingRunListener.startLaunch();
 	}
 
 	@Override
@@ -56,6 +54,6 @@ public class ReportPortalSpockExtension implements IGlobalExtension {
 	@Override
 	public void stop() {
 		LOGGER.info("\"LAUNCH\" completed");
-		spockService.finishLaunch();
+		reportingRunListener.finishLaunch();
 	}
 }

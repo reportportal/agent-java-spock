@@ -18,10 +18,12 @@ package com.epam.reportportal.spock.features
 
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
-class HelloSpockSpec extends Specification {
+class HelloSpockSpecUnroll extends Specification {
     public static final String TEST_NAME = "length of Spock's and his friends' names"
 
+    @Unroll
     def "length of Spock's and his friends' names" () {
         expect:
         name.size() == length

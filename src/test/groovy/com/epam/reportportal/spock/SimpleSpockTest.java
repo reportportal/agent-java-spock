@@ -49,8 +49,7 @@ public class SimpleSpockTest {
 	public void setupMock() {
 		TestUtils.mockLaunch(client, null, classId, methodId);
 		TestUtils.mockBatchLogging(client);
-		SpockService service = new SpockService(ReportPortal.create(client, standardParameters(), testExecutor()));
-		TestExtension.listener = new ReportPortalSpockListener(service);
+		TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(client, standardParameters(), testExecutor()));
 	}
 
 	@Test
@@ -73,7 +72,7 @@ public class SimpleSpockTest {
 		assertThat(classRq.getType(), allOf(notNullValue(), equalTo(ItemType.TEST.name())));
 		assertThat(testRq.getCodeRef(), allOf(
 				notNullValue(),
-				equalTo(HelloSpockSpec.class.getCanonicalName() + "." + HelloSpockSpec.class.getDeclaredMethods()[0].getName())
+				equalTo(HelloSpockSpec.class.getCanonicalName() + "." + HelloSpockSpec.TEST_NAME)
 		));
 	}
 }
