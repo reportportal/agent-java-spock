@@ -62,7 +62,7 @@ import static org.mockito.Mockito.when;
 
 public class TestUtils {
 
-	public static final String ROOT_SUITE_PREFIX = "root_";
+	public static final String ROOT_SUITE_PREFIX = "suite_";
 	public static final long PROCESSING_TIMEOUT = TimeUnit.MINUTES.toMillis(1);
 
 	private TestUtils() {
@@ -86,30 +86,20 @@ public class TestUtils {
 	}
 
 	public static void mockLaunch(@Nonnull final ReportPortalClient client, @Nullable final String launchUuid,
-			@Nullable final String suiteUuid, @Nonnull final String testClassUuid, @Nonnull final String testMethodUuid) {
-		mockLaunch(client, launchUuid, suiteUuid, testClassUuid, Collections.singleton(testMethodUuid));
+			@Nonnull final String testClassUuid, @Nonnull final String testMethodUuid) {
+		mockLaunch(client, launchUuid, testClassUuid, Collections.singleton(testMethodUuid));
 	}
 
 	public static void mockLaunch(@Nonnull final ReportPortalClient client, @Nullable final String launchUuid,
-			@Nullable final String suiteUuid, @Nonnull final String testClassUuid, @Nonnull final Collection<String> testMethodUuidList) {
-		mockLaunch(client, launchUuid, suiteUuid, Collections.singletonList(Pair.of(testClassUuid, testMethodUuidList)));
+			@Nonnull final String testClassUuid, @Nonnull final Collection<String> testMethodUuidList) {
+		mockLaunch(client, launchUuid, Collections.singletonList(Pair.of(testClassUuid, testMethodUuidList)));
 	}
 
 	@SuppressWarnings("unchecked")
 	public static <T extends Collection<String>> void mockLaunch(@Nonnull final ReportPortalClient client,
-			@Nullable final String launchUuid, @Nullable final String suiteUuid, @Nonnull final Collection<Pair<String, T>> testSteps) {
+			@Nullable final String launchUuid, @Nonnull final Collection<Pair<String, T>> testSteps) {
 		String launch = ofNullable(launchUuid).orElse(CommonUtils.namedId("launch_"));
 		when(client.startLaunch(any())).thenReturn(createMaybe(new StartLaunchRS(launch, 1L)));
-
-		String rootItemId = CommonUtils.namedId(ROOT_SUITE_PREFIX);
-		Maybe<ItemCreatedRS> rootMaybe = createMaybe(new ItemCreatedRS(rootItemId, rootItemId));
-		when(client.startTestItem(any())).thenReturn(rootMaybe);
-
-		String parentId = ofNullable(suiteUuid).map(s -> {
-			Maybe<ItemCreatedRS> suiteMaybe = createMaybe(new ItemCreatedRS(s, s));
-			when(client.startTestItem(same(rootItemId), any())).thenReturn(suiteMaybe);
-			return s;
-		}).orElse(rootItemId);
 
 		List<Maybe<ItemCreatedRS>> testResponses = testSteps.stream()
 				.map(Pair::getKey)
@@ -118,7 +108,7 @@ public class TestUtils {
 
 		Maybe<ItemCreatedRS> first = testResponses.get(0);
 		Maybe<ItemCreatedRS>[] other = testResponses.subList(1, testResponses.size()).toArray(new Maybe[0]);
-		when(client.startTestItem(same(parentId), any())).thenReturn(first, other);
+		when(client.startTestItem(any())).thenReturn(first, other);
 
 		testSteps.forEach(test -> {
 			String testClassUuid = test.getKey();
@@ -134,15 +124,6 @@ public class TestUtils {
 					createMaybe(new OperationCompletionRS())));
 			when(client.finishTestItem(same(testClassUuid), any())).thenReturn(createMaybe(new OperationCompletionRS()));
 		});
-
-		ofNullable(suiteUuid).ifPresent(s -> {
-			Maybe<OperationCompletionRS> suiteFinishMaybe = createMaybe(new OperationCompletionRS());
-			when(client.finishTestItem(same(s), any())).thenReturn(suiteFinishMaybe);
-		});
-
-		Maybe<OperationCompletionRS> rootFinishMaybe = createMaybe(new OperationCompletionRS());
-		when(client.finishTestItem(eq(rootItemId), any())).thenReturn(rootFinishMaybe);
-
 		when(client.finishLaunch(eq(launch), any())).thenReturn(createMaybe(new OperationCompletionRS()));
 	}
 

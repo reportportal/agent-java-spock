@@ -51,7 +51,7 @@ public class SimpleSpockTest {
 
 	@BeforeEach
 	public void setupMock() {
-		TestUtils.mockLaunch(client, null, null, classId, methodId);
+		TestUtils.mockLaunch(client, null, classId, methodId);
 		TestUtils.mockBatchLogging(client);
 		SpockService service = new SpockService(ReportPortal.create(client,
 				standardParameters(),
@@ -65,7 +65,7 @@ public class SimpleSpockTest {
 		Result result = runClasses(Collections.singletonList(CodRefExtension.class), HelloSpockSpec.class);
 
 		ArgumentCaptor<StartTestItemRQ> captor = ArgumentCaptor.forClass(StartTestItemRQ.class);
-		verify(client).startTestItem(ArgumentMatchers.startsWith("root_"), captor.capture());
+		verify(client).startTestItem(captor.capture());
 		verify(client).startTestItem(same(classId), captor.capture());
 
 		List<StartTestItemRQ> items = captor.getAllValues();
