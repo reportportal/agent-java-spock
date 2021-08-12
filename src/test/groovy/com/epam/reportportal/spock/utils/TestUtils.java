@@ -34,25 +34,16 @@ import okio.Buffer;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
-import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
-import org.spockframework.builder.DelegatingScript;
-import org.spockframework.runtime.ConfigurationScriptLoader;
-import org.spockframework.runtime.GlobalExtensionRegistry;
-import org.spockframework.runtime.RunContext;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import org.mockito.MockedStatic;
-import org.spockframework.util.SpockUserHomeUtil;
 
 import static com.epam.reportportal.util.test.CommonUtils.createMaybe;
 import static com.epam.reportportal.util.test.CommonUtils.generateUniqueId;
@@ -77,11 +68,6 @@ public class TestUtils {
 	}
 
 	public static Result runClasses(final Class<?>... testClasses) {
-		return runClasses(Collections.emptyList(), testClasses);
-	}
-
-	@SuppressWarnings("unchecked")
-	public static Result runClasses(final List<Class<?>> extensionClasses, final Class<?>... testClasses) {
 		return JUnitCore.runClasses(testClasses);
 	}
 

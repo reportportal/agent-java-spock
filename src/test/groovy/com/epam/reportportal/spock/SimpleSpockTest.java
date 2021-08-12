@@ -20,7 +20,7 @@ import com.epam.reportportal.listeners.ItemType;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.features.HelloSpockSpec;
-import com.epam.reportportal.spock.utils.CodRefExtension;
+import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.runner.Result;
 import org.mockito.ArgumentCaptor;
 
-import java.util.Collections;
 import java.util.List;
 
 import static com.epam.reportportal.spock.utils.TestUtils.*;
@@ -51,12 +50,12 @@ public class SimpleSpockTest {
 		TestUtils.mockLaunch(client, null, classId, methodId);
 		TestUtils.mockBatchLogging(client);
 		SpockService service = new SpockService(ReportPortal.create(client, standardParameters(), testExecutor()));
-		CodRefExtension.listener = new ReportPortalSpockListener(service);
+		TestExtension.listener = new ReportPortalSpockListener(service);
 	}
 
 	@Test
 	public void verify_static_test_code_reference_generation() {
-		Result result = runClasses(Collections.singletonList(CodRefExtension.class), HelloSpockSpec.class);
+		Result result = runClasses(HelloSpockSpec.class);
 
 		assertThat(result.getFailureCount(), equalTo(0));
 
@@ -72,7 +71,8 @@ public class SimpleSpockTest {
 
 		assertThat(classRq.getCodeRef(), allOf(notNullValue(), equalTo(HelloSpockSpec.class.getCanonicalName())));
 		assertThat(classRq.getType(), allOf(notNullValue(), equalTo(ItemType.TEST.name())));
-		assertThat(testRq.getCodeRef(), allOf(notNullValue(),
+		assertThat(testRq.getCodeRef(), allOf(
+				notNullValue(),
 				equalTo(HelloSpockSpec.class.getCanonicalName() + "." + HelloSpockSpec.class.getDeclaredMethods()[0].getName())
 		));
 	}

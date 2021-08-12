@@ -19,10 +19,10 @@ package com.epam.reportportal.spock.utils;
 import com.epam.reportportal.spock.ReportPortalSpockExtension;
 import com.epam.reportportal.spock.ReportPortalSpockListener;
 
-public class CodRefExtension extends ReportPortalSpockExtension {
+public class TestExtension extends ReportPortalSpockExtension {
 	public static volatile ReportPortalSpockListener listener;
 
-	public CodRefExtension() {
+	public TestExtension() {
 		super(listener);
 	}
 }
