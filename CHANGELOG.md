@@ -4,6 +4,8 @@
 ### Added
 - Code reference support
 - TestCaseID support
+### Changed
+- Refactoring of the agent's structure 
 
 ## [5.1.0-BETA-1]
 ### Changed
