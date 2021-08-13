@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
-apply plugin: "groovy"
+apply plugin: 'groovy'
 apply plugin: 'java-library'
 
 apply from: "${project.scripts_url}/${project.scripts_branch}/build-quality.gradle"
 apply from: "${project.scripts_url}/${project.scripts_branch}/release-commons.gradle"
-//apply from: "${project.scripts_url}/${project.scripts_branch}/signing.gradle"
+apply from: "${project.scripts_url}/${project.scripts_branch}/signing.gradle"
 apply from: "${project.scripts_url}/${project.scripts_branch}/jacoco.gradle"
 
 project.ext.limits = [
-        'instruction': 30,
-        'branch'     : 25,
-        'line'       : 30,
-        'complexity' : 26,
-        'method'     : 30,
-        'class'      : 35
+        'instruction': 40,
+        'branch'     : 40,
+        'line'       : 40,
+        'complexity' : 40,
+        'method'     : 40,
+        'class'      : 40
 ]
 
 sourceCompatibility = 1.8
