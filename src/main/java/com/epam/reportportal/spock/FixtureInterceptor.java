@@ -4,7 +4,7 @@ import org.spockframework.runtime.extension.IMethodInterceptor;
 import org.spockframework.runtime.extension.IMethodInvocation;
 import org.spockframework.runtime.model.ErrorInfo;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import javax.annotation.Nonnull;
 
 /**
  * Implementation of {@link org.spockframework.runtime.extension.IMethodInterceptor}, which allows to report
@@ -14,11 +14,9 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 class FixtureInterceptor implements IMethodInterceptor {
 
-	private final ISpockService spockService;
+	private final ReportPortalSpockListener spockService;
 
-	FixtureInterceptor(ISpockService spockService) {
-		checkArgument(spockService != null);
-
+	FixtureInterceptor(@Nonnull final ReportPortalSpockListener spockService) {
 		this.spockService = spockService;
 	}
 
