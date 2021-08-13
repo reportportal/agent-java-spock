@@ -14,24 +14,19 @@
  * limitations under the License.
  */
 
-package com.epam.reportportal.spock.features
+package com.epam.reportportal.spock.features.testcaseid
 
-
+import com.epam.reportportal.annotations.TestCaseId
 import spock.lang.Specification
-import spock.lang.Unroll
 
-class HelloSpockSpecUnroll extends Specification {
-    public static final String TEST_NAME = "length of Spock's and his friends' names"
+class PlainTestCaseId extends Specification {
 
-    @Unroll
-    def "length of Spock's and his friends' names"() {
+    public static final String TEST_CASE_ID = "my_test_case_id"
+
+    @TestCaseId(TEST_CASE_ID)
+    def "simple named test case id test"() {
         expect:
-        name.size() == length
-
-        where:
-        name     | length
-        "Spock"  | 5
-        "Kirk"   | 4
-        "Scotty" | 6
+        //noinspection GroovyPointlessBoolean
+        true == true
     }
 }

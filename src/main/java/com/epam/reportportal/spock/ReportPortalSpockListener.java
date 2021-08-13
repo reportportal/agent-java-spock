@@ -15,13 +15,16 @@
  */
 package com.epam.reportportal.spock;
 
+import com.epam.reportportal.annotations.TestCaseId;
 import com.epam.reportportal.exception.ReportPortalException;
 import com.epam.reportportal.listeners.ItemStatus;
 import com.epam.reportportal.listeners.ListenerParameters;
 import com.epam.reportportal.service.Launch;
 import com.epam.reportportal.service.LoggingContext;
 import com.epam.reportportal.service.ReportPortal;
+import com.epam.reportportal.service.item.TestCaseIdEntry;
 import com.epam.reportportal.utils.MemoizingSupplier;
+import com.epam.reportportal.utils.TestCaseIdUtils;
 import com.epam.ta.reportportal.ws.model.FinishExecutionRQ;
 import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
@@ -37,6 +40,7 @@ import org.spockframework.runtime.AbstractRunListener;
 import org.spockframework.runtime.model.*;
 import org.spockframework.util.ExceptionUtil;
 
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -50,6 +54,8 @@ import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISH
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.Iterables.getFirst;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
 import static org.spockframework.runtime.model.MethodKind.*;
 
 /**
@@ -60,6 +66,7 @@ import static org.spockframework.runtime.model.MethodKind.*;
 public class ReportPortalSpockListener extends AbstractRunListener {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(ReportPortalSpockListener.class);
+	private static final Object[] NOT_PROVIDED = new Object[] { "NOT_PROVIDED" };
 
 	public static final String NOT_ISSUE = "NOT_ISSUE";
 	private final AtomicBoolean isLaunchFailed = new AtomicBoolean();
@@ -280,8 +287,18 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	void reportIterationStart(IterationInfo iteration) {
 		StartTestItemRQ rq = createBaseStartTestItemRQ(iteration.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
 		rq.setDescription(buildIterationDescription(iteration));
-		Description description = iteration.getFeature().getDescription();
-		rq.setCodeRef(description.getClassName() + "." + description.getMethodName());
+		FeatureInfo featureInfo = iteration.getFeature();
+		Description description = featureInfo.getDescription();
+		String codeRef = description.getClassName() + "." + description.getMethodName();
+		rq.setCodeRef(codeRef);
+		Method method = featureInfo.getFeatureMethod().getReflection();
+		TestCaseId testCaseId = method.getAnnotation(TestCaseId.class);
+		List<Object> params = of(iteration.getDataValues()).map(p -> p == NOT_PROVIDED ? null : Arrays.asList(p)).orElse(null);
+		rq.setTestCaseId(ofNullable(TestCaseIdUtils.getTestCaseId(testCaseId,
+				method,
+				codeRef,
+				params
+		)).map(TestCaseIdEntry::getId).orElse(null));
 		ReportableItemFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(iteration.getFeature().getSpec());
 		try {
 			Maybe<String> testItemId = launch.get().startTestItem(specFootprint.getId(), rq);
@@ -396,7 +413,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	}
 
 	private IterationInfo buildIterationMaskForFeature(FeatureInfo featureInfo) {
-		IterationInfo iterationInfo = new IterationInfo(featureInfo, new String[] { "NOT PROVIDED" }, 0);
+		IterationInfo iterationInfo = new IterationInfo(featureInfo, NOT_PROVIDED, 0);
 		iterationInfo.setName(featureInfo.getName());
 		iterationInfo.setDescription(featureInfo.getDescription());
 		return iterationInfo;

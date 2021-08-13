@@ -22,7 +22,7 @@ import spock.lang.Specification
 class HelloSpockSpec extends Specification {
     public static final String TEST_NAME = "length of Spock's and his friends' names"
 
-    def "length of Spock's and his friends' names" () {
+    def "length of Spock's and his friends' names"() {
         expect:
         name.size() == length
 
