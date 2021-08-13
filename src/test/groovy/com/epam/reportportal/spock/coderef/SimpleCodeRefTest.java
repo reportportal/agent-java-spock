@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package com.epam.reportportal.spock;
+package com.epam.reportportal.spock.coderef;
 
 import com.epam.reportportal.listeners.ItemType;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
+import com.epam.reportportal.spock.ReportPortalSpockListener;
 import com.epam.reportportal.spock.features.HelloSpockSpec;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
@@ -38,7 +39,7 @@ import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-public class SimpleSpockTest {
+public class SimpleCodeRefTest {
 
 	private final String classId = CommonUtils.namedId("class_");
 	private final String methodId = CommonUtils.namedId("method_");
@@ -74,5 +75,6 @@ public class SimpleSpockTest {
 				notNullValue(),
 				equalTo(HelloSpockSpec.class.getCanonicalName() + "." + HelloSpockSpec.TEST_NAME)
 		));
+		assertThat(testRq.getType(), equalTo(ItemType.STEP.name()));
 	}
 }

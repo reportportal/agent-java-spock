@@ -109,10 +109,12 @@ public class NodeInfoUtilsTest {
 
 	@SuppressWarnings("unchecked")
 	private static Iterable<Object[]> parametersForFixtureDescription() {
-		MethodInfo inheritedFixtureInfo = mock(MethodInfo.class, RETURNS_DEEP_STUBS);
+		MethodInfo inheritedFixtureInfo = mock(MethodInfo.class);
 		String inheritedFixtureName = "inherited";
 		when(inheritedFixtureInfo.getName()).thenReturn(inheritedFixtureName);
-		when(inheritedFixtureInfo.getParent().getReflection()).thenReturn(((Class) FixtureSource.class));
+		SpecInfo parent = mock(SpecInfo.class);
+		when(inheritedFixtureInfo.getParent()).thenReturn(parent);
+		when(parent.getReflection()).thenReturn(((Class) FixtureSource.class));
 		String expectedInheritedName = format(INHERITED_FIXTURE_NAME_TEMPLATE, FixtureSource.class.getSimpleName(), inheritedFixtureName);
 
 		MethodInfo plainFixtureInfo = mock(MethodInfo.class);
