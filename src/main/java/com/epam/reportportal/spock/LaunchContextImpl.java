@@ -15,20 +15,23 @@
  */
 package com.epam.reportportal.spock;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.reactivex.Maybe;
 import org.spockframework.runtime.model.FeatureInfo;
 import org.spockframework.runtime.model.IterationInfo;
 import org.spockframework.runtime.model.SpecInfo;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static com.epam.reportportal.spock.NodeInfoUtils.getSpecIdentifier;
 import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISHED;
+import static java.util.Optional.ofNullable;
 
 /**
  * Default implementation of {@link AbstractLaunchContext}
@@ -49,12 +52,12 @@ class LaunchContextImpl extends AbstractLaunchContext {
 	}
 
 	@Override
-	public void addRunningFeature(FeatureInfo featureInfo) {
+	public void addRunningFeature(@Nullable Maybe<String> id, @Nonnull FeatureInfo featureInfo) {
 		SpecInfo specInfo = featureInfo.getSpec();
 		Specification specFootprint = findSpecFootprint(featureInfo.getSpec());
 		if (specFootprint != null) {
 			getRuntimePointerForSpec(specInfo).setFeatureInfo(featureInfo);
-			specFootprint.addRunningFeature(featureInfo);
+			specFootprint.addRunningFeature(featureInfo, id);
 		}
 	}
 
@@ -72,6 +75,12 @@ class LaunchContextImpl extends AbstractLaunchContext {
 	}
 
 	@Override
+	@Nullable
+	public NodeFootprint<FeatureInfo> findFeatureFootprint(FeatureInfo featureInfo) {
+		return ofNullable(findSpecFootprint(featureInfo.getSpec())).map(s->s.getFeature(featureInfo)).orElse(null);
+	}
+
+	@Override
 	public NodeFootprint<IterationInfo> findIterationFootprint(IterationInfo iterationInfo) {
 		Specification specFootprint = findSpecFootprint(iterationInfo.getFeature().getSpec());
 		if (specFootprint != null) {
@@ -84,12 +93,10 @@ class LaunchContextImpl extends AbstractLaunchContext {
 	}
 
 	@Override
-	public Iterable<Iteration> findIterationFootprints(FeatureInfo featureInfo) {
-		Specification specFootprint = findSpecFootprint(featureInfo.getSpec());
-		if (specFootprint != null) {
-			return specFootprint.getFeature(featureInfo).getAllTrackedIteration();
-		}
-		return null;
+	public Iterable<Iteration> findIterationFootprints(final FeatureInfo featureInfo) {
+		return ofNullable(findSpecFootprint(featureInfo.getSpec())).map(s -> s.getFeature(featureInfo))
+				.map(Feature::getAllTrackedIteration)
+				.orElse(null);
 	}
 
 	@Override
@@ -130,12 +137,16 @@ class LaunchContextImpl extends AbstractLaunchContext {
 			return true;
 		}
 
-		private void addRunningFeature(FeatureInfo featureInfo) {
-			getAllTrackedFeatures().add(new Feature(featureInfo));
+		private void addRunningFeature(FeatureInfo featureInfo, Maybe<String> id) {
+			getAllTrackedFeatures().add(new Feature(featureInfo, id));
 		}
 
+		@Nullable
 		private Feature getFeature(final FeatureInfo featureInfo) {
-			return Iterables.find(getAllTrackedFeatures(), input -> input != null && featureInfo.equals(input.featureInfo));
+			return getAllTrackedFeatures().stream()
+					.filter(input -> input != null && featureInfo.equals(input.getItem()))
+					.findAny()
+					.orElse(null);
 		}
 
 		private List<Feature> getAllTrackedFeatures() {
@@ -146,13 +157,16 @@ class LaunchContextImpl extends AbstractLaunchContext {
 		}
 	}
 
-	private static class Feature {
-
-		private final FeatureInfo featureInfo;
+	private static class Feature extends NodeFootprint<FeatureInfo> {
 		private List<Iteration> iterations;
 
-		Feature(FeatureInfo featureInfo) {
-			this.featureInfo = featureInfo;
+		Feature(FeatureInfo featureInfo, Maybe<String> id) {
+			super(featureInfo, id);
+		}
+
+		@Override
+		boolean hasDescendants() {
+			return false;
 		}
 
 		private List<Iteration> getAllTrackedIteration() {
@@ -163,8 +177,11 @@ class LaunchContextImpl extends AbstractLaunchContext {
 		}
 
 		private Iteration getIteration(final IterationInfo iterationInfo) {
-
-			return Iterables.find(getAllTrackedIteration(), input -> input != null && iterationInfo.equals(input.getItem()));
+			return getAllTrackedIteration().stream()
+					.filter(Objects::nonNull)
+					.filter(input -> iterationInfo.equals(input.getItem()))
+					.findAny()
+					.orElse(null);
 		}
 
 		private void addIteration(IterationInfo iterationInfo, Maybe<String> id) {

@@ -68,9 +68,12 @@ abstract class AbstractLaunchContext {
 
 	abstract void addRunningSpec(Maybe<String> id, SpecInfo specInfo);
 
-	abstract void addRunningFeature(FeatureInfo featureInfo);
+	abstract void addRunningFeature(Maybe<String> id, FeatureInfo featureInfo);
 
 	abstract void addRunningIteration(Maybe<String> id, IterationInfo iterationInfo);
+
+	@Nullable
+	public abstract NodeFootprint<FeatureInfo> findFeatureFootprint(FeatureInfo featureInfo);
 
 	abstract NodeFootprint<IterationInfo> findIterationFootprint(IterationInfo iterationInfo);
 

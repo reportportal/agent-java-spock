@@ -41,8 +41,6 @@ abstract class ReportableItemFootprint<T extends NodeInfo> {
 
 	ReportableItemFootprint(T item, Maybe<String> id) {
 		checkArgument(item != null, "Node info shouldn't be null");
-		checkArgument(id != null, "Test item id shouldn't be null");
-
 		this.id = id;
 		this.item = item;
 	}

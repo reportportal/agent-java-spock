@@ -24,6 +24,7 @@ import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.Result;
@@ -31,6 +32,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.epam.reportportal.spock.utils.TestUtils.*;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -42,12 +45,15 @@ import static org.mockito.Mockito.verify;
 public class TestCaseIdSimpleTest {
 	private final String classId = CommonUtils.namedId("class_");
 	private final String methodId = CommonUtils.namedId("method_");
+	private final List<String> nestedSteps = Stream.generate(()->CommonUtils.namedId("method_")).limit(3).collect(Collectors.toList());
+	private final List<Pair<String, String>> nestedStepsLink = nestedSteps.stream().map(s-> Pair.of(methodId, s)).collect(Collectors.toList());
 
 	private final ReportPortalClient client = mock(ReportPortalClient.class);
 
 	@BeforeEach
 	public void setupMock() {
 		TestUtils.mockLaunch(client, null, classId, methodId);
+		TestUtils.mockNestedSteps(client, nestedStepsLink);
 		TestUtils.mockBatchLogging(client);
 		TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(client, standardParameters(), testExecutor()));
 	}

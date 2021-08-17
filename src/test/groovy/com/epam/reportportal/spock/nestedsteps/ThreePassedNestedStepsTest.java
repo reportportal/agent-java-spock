@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.epam.reportportal.spock.coderef;
+package com.epam.reportportal.spock.nestedsteps;
 
+import com.epam.reportportal.listeners.ItemStatus;
 import com.epam.reportportal.listeners.ItemType;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
@@ -24,6 +25,7 @@ import com.epam.reportportal.spock.features.HelloSpockSpec;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
+import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,17 +39,20 @@ import java.util.stream.Stream;
 
 import static com.epam.reportportal.spock.utils.TestUtils.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
-public class SimpleCodeRefTest {
+public class ThreePassedNestedStepsTest {
 
 	private final String classId = CommonUtils.namedId("class_");
 	private final String methodId = CommonUtils.namedId("method_");
-	private final List<String> nestedSteps = Stream.generate(()->CommonUtils.namedId("method_")).limit(3).collect(Collectors.toList());
-	private final List<Pair<String, String>> nestedStepsLink = nestedSteps.stream().map(s-> Pair.of(methodId, s)).collect(Collectors.toList());
+	private final List<String> nestedSteps = Stream.generate(() -> CommonUtils.namedId("method_")).limit(3).collect(Collectors.toList());
+	private final List<Pair<String, String>> nestedStepsLink = nestedSteps.stream()
+			.map(s -> Pair.of(methodId, s))
+			.collect(Collectors.toList());
 
 	private final ReportPortalClient client = mock(ReportPortalClient.class);
 
@@ -60,27 +65,31 @@ public class SimpleCodeRefTest {
 	}
 
 	@Test
-	public void verify_static_test_code_reference_generation() {
+	public void verify_passed_nested_step_reporting() {
 		Result result = runClasses(HelloSpockSpec.class);
 
 		assertThat(result.getFailureCount(), equalTo(0));
 
-		ArgumentCaptor<StartTestItemRQ> captor = ArgumentCaptor.forClass(StartTestItemRQ.class);
-		verify(client).startTestItem(captor.capture());
-		verify(client).startTestItem(same(classId), captor.capture());
+		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
+		verify(client).startTestItem(any(StartTestItemRQ.class));
+		verify(client).startTestItem(same(classId), any(StartTestItemRQ.class));
+		verify(client, times(3)).startTestItem(same(methodId), startCaptor.capture());
 
-		List<StartTestItemRQ> items = captor.getAllValues();
-		assertThat(items, hasSize(2));
+		List<StartTestItemRQ> items = startCaptor.getAllValues();
 
-		StartTestItemRQ classRq = items.get(0);
-		StartTestItemRQ testRq = items.get(1);
+		items.forEach(i -> {
+			assertThat(i.getType(), equalTo(ItemType.STEP.name()));
+			assertThat(i.isHasStats(), equalTo(Boolean.FALSE));
+		});
 
-		assertThat(classRq.getCodeRef(), allOf(notNullValue(), equalTo(HelloSpockSpec.class.getCanonicalName())));
-		assertThat(classRq.getType(), allOf(notNullValue(), equalTo(ItemType.TEST.name())));
-		assertThat(testRq.getCodeRef(), allOf(
-				notNullValue(),
-				equalTo(HelloSpockSpec.class.getCanonicalName() + "." + HelloSpockSpec.TEST_NAME)
-		));
-		assertThat(testRq.getType(), equalTo(ItemType.STEP.name()));
+		ArgumentCaptor<FinishTestItemRQ> finishNestedStepCaptor = ArgumentCaptor.forClass(FinishTestItemRQ.class);
+		nestedSteps.forEach(s -> verify(client).finishTestItem(eq(s), finishNestedStepCaptor.capture()));
+
+		List<FinishTestItemRQ> finishItems = finishNestedStepCaptor.getAllValues();
+		finishItems.forEach(i -> assertThat(i.getStatus(), equalTo(ItemStatus.PASSED.name())));
+
+		ArgumentCaptor<FinishTestItemRQ> finishStepCaptor = ArgumentCaptor.forClass(FinishTestItemRQ.class);
+		verify(client).finishTestItem(eq(methodId), finishStepCaptor.capture());
+		assertThat(finishStepCaptor.getValue().getStatus(), equalTo(ItemStatus.PASSED.name()));
 	}
 }

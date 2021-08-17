@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- Iterations as nested steps reporting
 
 ## [5.1.0-BETA-3]
 ### Added
