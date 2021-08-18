@@ -166,7 +166,7 @@ class LaunchContextImpl extends AbstractLaunchContext {
 
 		@Override
 		boolean hasDescendants() {
-			return false;
+			return true;
 		}
 
 		private List<Iteration> getAllTrackedIteration() {

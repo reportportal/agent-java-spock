@@ -45,8 +45,10 @@ import static org.mockito.Mockito.verify;
 public class TestCaseIdSimpleTest {
 	private final String classId = CommonUtils.namedId("class_");
 	private final String methodId = CommonUtils.namedId("method_");
-	private final List<String> nestedSteps = Stream.generate(()->CommonUtils.namedId("method_")).limit(3).collect(Collectors.toList());
-	private final List<Pair<String, String>> nestedStepsLink = nestedSteps.stream().map(s-> Pair.of(methodId, s)).collect(Collectors.toList());
+	private final List<String> nestedSteps = Stream.generate(() -> CommonUtils.namedId("method_")).limit(3).collect(Collectors.toList());
+	private final List<Pair<String, String>> nestedStepsLink = nestedSteps.stream()
+			.map(s -> Pair.of(methodId, s))
+			.collect(Collectors.toList());
 
 	private final ReportPortalClient client = mock(ReportPortalClient.class);
 

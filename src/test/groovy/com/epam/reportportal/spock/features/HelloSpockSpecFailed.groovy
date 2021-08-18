@@ -28,6 +28,6 @@ class HelloSpockSpecFailed extends Specification {
         name     | length
         "Spock"  | 5
         "Kirk"   | 4
-        "Scotty" | 7
+        "Scotty" | 7 // failed case
     }
 }
