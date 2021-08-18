@@ -14,15 +14,19 @@
  * limitations under the License.
  */
 
-package com.epam.reportportal.spock.testcaseid;
+package com.epam.reportportal.spock.fail;
 
+import com.epam.reportportal.listeners.ItemStatus;
+import com.epam.reportportal.listeners.ItemType;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.ReportPortalSpockListener;
-import com.epam.reportportal.spock.features.HelloSpockSpecUnroll;
+import com.epam.reportportal.spock.features.HelloSpockSpecUnrollFailed;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
+import com.epam.ta.reportportal.ws.model.FinishExecutionRQ;
+import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,12 +39,13 @@ import java.util.stream.Stream;
 
 import static com.epam.reportportal.spock.utils.TestUtils.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
 
-public class TestCaseIdParameterizedTest {
+public class ThreeStepsOneFailedTest {
 
 	private final String classId = CommonUtils.namedId("class_");
 	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(3).collect(Collectors.toList());
@@ -55,19 +60,30 @@ public class TestCaseIdParameterizedTest {
 	}
 
 	@Test
-	public void verify_test_case_id_unroll_feature_generation() {
-		Result result = runClasses(HelloSpockSpecUnroll.class);
+	public void verify_one_failed_unrolled_step_reporting() {
+		Result result = runClasses(HelloSpockSpecUnrollFailed.class);
 
-		assertThat(result.getFailureCount(), equalTo(0));
+		assertThat(result.getFailureCount(), equalTo(1));
 
-		verify(client).startTestItem(any());
-		ArgumentCaptor<StartTestItemRQ> captor = ArgumentCaptor.forClass(StartTestItemRQ.class);
-		verify(client, times(3)).startTestItem(same(classId), captor.capture());
+		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
+		verify(client).startTestItem(any(StartTestItemRQ.class));
+		verify(client, times(3)).startTestItem(same(classId), startCaptor.capture());
 
-		List<String> items = captor.getAllValues().stream().map(StartTestItemRQ::getTestCaseId).collect(Collectors.toList());
-		assertThat(items, hasSize(3));
+		List<StartTestItemRQ> items = startCaptor.getAllValues();
 
-		String staticPart = HelloSpockSpecUnroll.class.getCanonicalName() + "." + HelloSpockSpecUnroll.TEST_NAME;
-		assertThat(items, containsInAnyOrder(staticPart + "[Spock,5]", staticPart + "[Kirk,4]", staticPart + "[Scotty,6]"));
+		items.forEach(i -> {
+			assertThat(i.getType(), equalTo(ItemType.STEP.name()));
+			assertThat(i.isHasStats(), equalTo(Boolean.TRUE));
+		});
+
+		ArgumentCaptor<FinishTestItemRQ> finishNestedStepCaptor = ArgumentCaptor.forClass(FinishTestItemRQ.class);
+		methodIds.forEach(s -> verify(client).finishTestItem(eq(s), finishNestedStepCaptor.capture()));
+
+		List<String> finishItemStatuses = finishNestedStepCaptor.getAllValues()
+				.stream()
+				.map(FinishExecutionRQ::getStatus)
+				.collect(Collectors.toList());
+		assertThat(finishItemStatuses, containsInAnyOrder(ItemStatus.PASSED.name(), ItemStatus.PASSED.name(), ItemStatus.FAILED.name()));
+		verify(client).finishTestItem(eq(classId), any());
 	}
 }
