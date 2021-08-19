@@ -14,38 +14,36 @@
  * limitations under the License.
  */
 
-package com.epam.reportportal.spock.fail;
+package com.epam.reportportal.spock.params;
 
-import com.epam.reportportal.listeners.ItemStatus;
-import com.epam.reportportal.listeners.ItemType;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.ReportPortalSpockListener;
-import com.epam.reportportal.spock.features.HelloSpockSpecUnrollFailed;
+import com.epam.reportportal.spock.features.HelloSpockSpecUnroll;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
-import com.epam.ta.reportportal.ws.model.FinishExecutionRQ;
-import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
+import com.epam.ta.reportportal.ws.model.ParameterResource;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.Result;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.epam.reportportal.spock.utils.TestUtils.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.equalTo;
-import static org.mockito.ArgumentMatchers.any;
+import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.matchesRegex;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
 
-public class ThreeStepsOneFailedTest {
+public class ParamsReportingTest {
 
 	private final String classId = CommonUtils.namedId("class_");
 	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(3).collect(Collectors.toList());
@@ -60,35 +58,22 @@ public class ThreeStepsOneFailedTest {
 	}
 
 	@Test
-	public void verify_one_failed_unrolled_step_reporting() {
-		Result result = runClasses(HelloSpockSpecUnrollFailed.class);
+	public void verify_parameters_reporting() {
+		Result result = runClasses(HelloSpockSpecUnroll.class);
+		assertThat(result.getFailureCount(), equalTo(0));
 
-		assertThat(result.getFailureCount(), equalTo(1));
-
-		verify(client).startLaunch(any());
 		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
-		verify(client).startTestItem(any(StartTestItemRQ.class));
 		verify(client, times(3)).startTestItem(same(classId), startCaptor.capture());
 
 		List<StartTestItemRQ> items = startCaptor.getAllValues();
 
 		items.forEach(i -> {
-			assertThat(i.getType(), equalTo(ItemType.STEP.name()));
-			assertThat(i.isHasStats(), equalTo(Boolean.TRUE));
+			assertThat(i.getParameters(), hasSize(2));
+			Map<String, String> params = i.getParameters()
+					.stream()
+					.collect(Collectors.toMap(ParameterResource::getKey, ParameterResource::getValue));
+			assertThat(params, hasEntry(equalTo("name"), Matchers.any(String.class)));
+			assertThat(params, hasEntry(equalTo("length"), matchesRegex("[1-9]")));
 		});
-
-		ArgumentCaptor<FinishTestItemRQ> finishNestedStepCaptor = ArgumentCaptor.forClass(FinishTestItemRQ.class);
-		methodIds.forEach(s -> verify(client).finishTestItem(eq(s), finishNestedStepCaptor.capture()));
-
-		List<String> finishItemStatuses = finishNestedStepCaptor.getAllValues()
-				.stream()
-				.map(FinishExecutionRQ::getStatus)
-				.collect(Collectors.toList());
-		assertThat(finishItemStatuses, containsInAnyOrder(ItemStatus.PASSED.name(), ItemStatus.PASSED.name(), ItemStatus.FAILED.name()));
-		verify(client).finishTestItem(eq(classId), any());
-
-		//noinspection unchecked
-		verify(client, atLeast(1)).log(any(List.class));
-		verifyNoMoreInteractions(client);
 	}
 }

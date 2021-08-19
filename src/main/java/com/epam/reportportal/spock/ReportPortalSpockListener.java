@@ -24,6 +24,7 @@ import com.epam.reportportal.service.LoggingContext;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.item.TestCaseIdEntry;
 import com.epam.reportportal.utils.MemoizingSupplier;
+import com.epam.reportportal.utils.ParameterUtils;
 import com.epam.reportportal.utils.StatusEvaluation;
 import com.epam.reportportal.utils.TestCaseIdUtils;
 import com.epam.ta.reportportal.ws.model.FinishExecutionRQ;
@@ -180,7 +181,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	protected void reportIterationFinish(ReportableItemFootprint<IterationInfo> footprint) {
 		FinishTestItemRQ rq = getFinishTestItemRq();
-		if(footprint.getStatus().isPresent()) {
+		if (footprint.getStatus().isPresent()) {
 			rq.setStatus(footprint.getStatus().get().name());
 		} else {
 			rq.setStatus(ItemStatus.PASSED.name());
@@ -192,16 +193,16 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	protected void reportTestItemFinish(ReportableItemFootprint<?> footprint) {
 		FinishTestItemRQ rq = getFinishTestItemRq();
-		if(footprint.getStatus().isPresent()) {
+		if (footprint.getStatus().isPresent()) {
 			rq.setStatus(footprint.getStatus().get().name());
 		} else {
 			Object item = footprint.getItem();
-			if(item instanceof FeatureInfo) {
+			if (item instanceof FeatureInfo) {
 				ItemStatus status = ItemStatus.PASSED;
-				for(NodeFootprint<IterationInfo> childItem : launchContext.findIterationFootprints((FeatureInfo) item)) {
+				for (NodeFootprint<IterationInfo> childItem : launchContext.findIterationFootprints((FeatureInfo) item)) {
 					status = StatusEvaluation.evaluateStatus(status, childItem.getStatus().orElse(null));
 				}
-				if(status != null) {
+				if (status != null) {
 					rq.setStatus(status.name());
 				}
 			}
@@ -430,6 +431,12 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		List<Object> params = ofNullable(iteration.getDataValues()).map(Arrays::asList).orElse(null);
 		rq.setTestCaseId(ofNullable(TestCaseIdUtils.getTestCaseId(testCaseId, method, codeRef, params)).map(TestCaseIdEntry::getId)
 				.orElse(null));
+		List<Object> paramList = ofNullable(params).orElse(Collections.emptyList());
+		List<String> names = iteration.getFeature().getParameterNames();
+		rq.setParameters(ParameterUtils.getParameters(
+				codeRef,
+				IntStream.range(0, paramList.size()).mapToObj(i -> Pair.of(names.get(i), paramList.get(i))).collect(Collectors.toList())
+		));
 		return rq;
 	}
 

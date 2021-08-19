@@ -3,6 +3,7 @@
 ## [Unreleased]
 ### Added
 - Iterations as nested steps reporting
+- Parameters support
 ### Fixed
 - Iterations now fail parent feature
 
