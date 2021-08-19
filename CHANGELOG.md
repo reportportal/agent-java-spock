@@ -6,6 +6,7 @@
 - Parameters support
 ### Fixed
 - Iterations now fail parent feature
+- Unrolled step description
 
 ## [5.1.0-BETA-3]
 ### Added

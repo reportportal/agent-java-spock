@@ -16,7 +16,6 @@
 package com.epam.reportportal.spock;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -25,6 +24,9 @@ import org.spockframework.runtime.model.*;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.lang.String.format;
 import static java.util.Collections.synchronizedMap;
@@ -32,7 +34,7 @@ import static org.spockframework.runtime.model.BlockKind.WHERE;
 
 /**
  * Utility class, which provides static convenience methods for the operations on
- * {@link org.spockframework.runtime.model.NodeInfo} and its derivatives
+ * {@link NodeInfo} and its derivatives
  *
  * @author Dzmitry Mikhievich
  */
@@ -74,7 +76,7 @@ final class NodeInfoUtils {
 		while (blocksIterator.hasNext()) {
 			BlockInfo block = blocksIterator.next();
 			boolean isLast = !blocksIterator.hasNext();
-			if (!SKIP_BLOCK_CONDITION.apply(block)) {
+			if (!SKIP_BLOCK_CONDITION.test(block)) {
 				appendBlockInfo(description, block);
 				if (!isLast) {
 					description.append(LINE_SEPARATOR);
@@ -125,13 +127,9 @@ final class NodeInfoUtils {
 		List<String> parameterNames = iterationInfo.getFeature().getParameterNames();
 		Object[] dataValues = iterationInfo.getDataValues();
 		if (!parameterNames.isEmpty() && dataValues != null) {
-			System.out.println("----=============== SIZE: " + dataValues.length);
-			for (String parameterName : parameterNames) {
-				Object value = dataValues[0];
-				if (value instanceof String) {
-					iterationDescription = iterationDescription.replaceAll("\\{?#" + parameterName + "}?", (String) value);
-				}
-			}
+			iterationDescription += "\n" + IntStream.range(0, parameterNames.size())
+					.mapToObj(i -> parameterNames.get(i) + ": " + dataValues[i].toString())
+					.collect(Collectors.joining("; "));
 		}
 
 		return iterationDescription;
