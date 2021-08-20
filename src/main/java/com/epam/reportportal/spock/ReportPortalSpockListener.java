@@ -191,22 +191,26 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		footprint.markAsPublished();
 	}
 
+	protected void reportFeatureFinish(ReportableItemFootprint<FeatureInfo> footprint) {
+		FinishTestItemRQ rq = getFinishTestItemRq();
+		rq.setStatus(footprint.getStatus().map(Enum::name).orElseGet(() -> {
+			FeatureInfo feature = footprint.getItem();
+			ItemStatus status = ItemStatus.PASSED;
+			for (NodeFootprint<IterationInfo> childItem : launchContext.findIterationFootprints(feature)) {
+				status = StatusEvaluation.evaluateStatus(status, childItem.getStatus().orElse(null));
+			}
+			return ofNullable(status).map(Enum::name).orElseGet(() -> {
+				LOGGER.error("Unable to calculate status for feature");
+				return FAILED.name();
+			});
+		}));
+		launch.get().finishTestItem(footprint.getId(), rq);
+		footprint.markAsPublished();
+	}
+
 	protected void reportTestItemFinish(ReportableItemFootprint<?> footprint) {
 		FinishTestItemRQ rq = getFinishTestItemRq();
-		if (footprint.getStatus().isPresent()) {
-			rq.setStatus(footprint.getStatus().get().name());
-		} else {
-			Object item = footprint.getItem();
-			if (item instanceof FeatureInfo) {
-				ItemStatus status = ItemStatus.PASSED;
-				for (NodeFootprint<IterationInfo> childItem : launchContext.findIterationFootprints((FeatureInfo) item)) {
-					status = StatusEvaluation.evaluateStatus(status, childItem.getStatus().orElse(null));
-				}
-				if (status != null) {
-					rq.setStatus(status.name());
-				}
-			}
-		}
+		rq.setStatus(footprint.getStatus().map(Enum::name).orElse(ItemStatus.PASSED.name()));
 		launch.get().finishTestItem(footprint.getId(), rq);
 		footprint.markAsPublished();
 	}
@@ -220,7 +224,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	public void publishFeatureResult(FeatureInfo feature) {
 		if (isMonolithicParametrizedFeature(feature)) {
 			ReportableItemFootprint<FeatureInfo> footprint = launchContext.findFeatureFootprint(feature);
-			reportTestItemFinish(footprint);
+			reportFeatureFinish(footprint);
 		} else {
 			Iterable<? extends ReportableItemFootprint<IterationInfo>> iterations = launchContext.findIterationFootprints(feature);
 			StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterations.iterator(), Spliterator.SIZED), false)
@@ -433,8 +437,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 				.orElse(null));
 		List<Object> paramList = ofNullable(params).orElse(Collections.emptyList());
 		List<String> names = iteration.getFeature().getParameterNames();
-		rq.setParameters(ParameterUtils.getParameters(
-				codeRef,
+		rq.setParameters(ParameterUtils.getParameters(codeRef,
 				IntStream.range(0, paramList.size()).mapToObj(i -> Pair.of(names.get(i), paramList.get(i))).collect(Collectors.toList())
 		));
 		return rq;
