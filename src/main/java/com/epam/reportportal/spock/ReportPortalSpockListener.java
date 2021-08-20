@@ -144,7 +144,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 			testItemId = launch.get().startTestItem(specFootprint.getId(), rq);
 		}
 		@SuppressWarnings("rawtypes")
-		NodeFootprint<? extends NodeInfo> fixtureOwnerFootprint = findFixtureOwner(feature, iteration, fixture);
+		NodeFootprint<? extends NodeInfo> fixtureOwnerFootprint = findFixtureOwner(spec, feature, iteration, fixture);
 		fixtureOwnerFootprint.addFixtureFootprint(new FixtureFootprint(fixture, testItemId));
 	}
 
@@ -255,7 +255,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	}
 
 	public void publishFixtureResult(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
-		NodeFootprint ownerFootprint = findFixtureOwner(feature, iteration, fixture);
+		NodeFootprint ownerFootprint = findFixtureOwner(spec, feature, iteration, fixture);
 		ReportableItemFootprint<MethodInfo> fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(fixture);
 		reportTestItemFinish(fixtureFootprint);
 	}
@@ -267,7 +267,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	public void reportFixtureError(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, ErrorInfo error) {
 		MethodInfo method = error.getMethod();
-		NodeFootprint ownerFootprint = findFixtureOwner(feature, iteration, error.getMethod());
+		NodeFootprint ownerFootprint = findFixtureOwner(spec, feature, iteration, error.getMethod());
 		MethodKind kind = method.getKind();
 		if (!kind.isCleanupMethod()) {
 			NodeFootprint<?> footprint;
@@ -368,9 +368,11 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
-	NodeFootprint<? extends NodeInfo> findFixtureOwner(FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
+	NodeFootprint<? extends NodeInfo> findFixtureOwner(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
 		MethodKind kind = fixture.getKind();
-		if (kind.isSpecScopedFixtureMethod() || (!feature.isParameterized() && !feature.isReportIterations())) {
+		if(kind.isSpecScopedFixtureMethod()) {
+			return launchContext.findSpecFootprint(spec);
+		}else if (!feature.isParameterized() && !feature.isReportIterations()) {
 			return launchContext.findFeatureFootprint(feature);
 		} else {
 			return launchContext.findIterationFootprint(iteration);
