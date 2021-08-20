@@ -131,13 +131,20 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	}
 
 	public void registerFixture(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
-		NodeFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(fixture.getParent());
+		NodeFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
 		boolean isFixtureInherited = !fixture.getParent().equals(specFootprint.getItem());
 		String fixtureDisplayName = getFixtureDisplayName(fixture, isFixtureInherited);
 		MethodKind kind = fixture.getKind();
 		StartTestItemRQ rq = createBaseStartTestItemRQ(fixtureDisplayName, ITEM_TYPES_REGISTRY.get(kind));
-		Maybe<String> testItemId = this.launch.get().startTestItem(specFootprint.getId(), rq);
-		NodeFootprint fixtureOwnerFootprint = findFixtureOwner(feature, fixture);
+		Maybe<String> testItemId;
+		if (kind.isFeatureScopedFixtureMethod() && !feature.isReportIterations() && feature.isParameterized()) {
+			rq.setHasStats(false);
+			testItemId = launch.get().startTestItem(launchContext.findFeatureFootprint(feature).getId(), rq);
+		} else {
+			testItemId = launch.get().startTestItem(specFootprint.getId(), rq);
+		}
+		@SuppressWarnings("rawtypes")
+		NodeFootprint<? extends NodeInfo> fixtureOwnerFootprint = findFixtureOwner(feature, iteration, fixture);
 		fixtureOwnerFootprint.addFixtureFootprint(new FixtureFootprint(fixture, testItemId));
 	}
 
@@ -201,8 +208,13 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}).orElseGet(() -> {
 			FeatureInfo feature = footprint.getItem();
 			ItemStatus status = ItemStatus.PASSED;
-			for (NodeFootprint<IterationInfo> childItem : launchContext.findIterationFootprints(feature)) {
-				status = StatusEvaluation.evaluateStatus(status, childItem.getStatus().orElse(null));
+			for (NodeFootprint<IterationInfo> childItemFootprint : launchContext.findIterationFootprints(feature)) {
+				for (ReportableItemFootprint<MethodInfo> fixtureFootprint : childItemFootprint.getFixtures()) {
+					if (fixtureFootprint.getItem().getKind().isSetupMethod()) {
+						status = StatusEvaluation.evaluateStatus(status, fixtureFootprint.getStatus().orElse(null));
+					}
+				}
+				status = StatusEvaluation.evaluateStatus(status, childItemFootprint.getStatus().orElse(null));
 			}
 			return ofNullable(status).map(Enum::name).orElseGet(() -> {
 				LOGGER.error("Unable to calculate status for feature", new IllegalStateException());
@@ -243,7 +255,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	}
 
 	public void publishFixtureResult(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
-		NodeFootprint ownerFootprint = findFixtureOwner(feature, fixture);
+		NodeFootprint ownerFootprint = findFixtureOwner(feature, iteration, fixture);
 		ReportableItemFootprint<MethodInfo> fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(fixture);
 		reportTestItemFinish(fixtureFootprint);
 	}
@@ -255,15 +267,16 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	public void reportFixtureError(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, ErrorInfo error) {
 		MethodInfo method = error.getMethod();
-		NodeFootprint ownerFootprint = findFixtureOwner(feature, error.getMethod());
+		NodeFootprint ownerFootprint = findFixtureOwner(feature, iteration, error.getMethod());
 		MethodKind kind = method.getKind();
 		if (!kind.isCleanupMethod()) {
-			if (feature.isReportIterations()) {
-				NodeFootprint<IterationInfo> iterationFootprint = launchContext.findIterationFootprint(iteration);
-				iterationFootprint.setStatus(SKIPPED);
+			NodeFootprint<?> footprint;
+			if (feature.isParameterized() || feature.isReportIterations()) {
+				footprint = launchContext.findIterationFootprint(iteration);
 			} else {
-				ownerFootprint.setStatus(SKIPPED);
+				footprint = launchContext.findFeatureFootprint(feature);
 			}
+			footprint.setStatus(SKIPPED);
 		}
 		ReportableItemFootprint<MethodInfo> fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(method);
 		fixtureFootprint.setStatus(FAILED);
@@ -355,13 +368,12 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
-	NodeFootprint<? extends NodeInfo> findFixtureOwner(FeatureInfo feature, MethodInfo fixture) {
+	NodeFootprint<? extends NodeInfo> findFixtureOwner(FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
 		MethodKind kind = fixture.getKind();
-		SpecInfo sourceSpec = fixture.getParent();
-		if (kind.isSpecScopedFixtureMethod()) {
-			return launchContext.findSpecFootprint(sourceSpec);
-		} else {
+		if (kind.isSpecScopedFixtureMethod() || (!feature.isParameterized() && !feature.isReportIterations())) {
 			return launchContext.findFeatureFootprint(feature);
+		} else {
+			return launchContext.findIterationFootprint(iteration);
 		}
 	}
 

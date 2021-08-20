@@ -20,7 +20,7 @@ package com.epam.reportportal.spock.features.fixtures
 import spock.lang.Specification
 import spock.lang.Unroll
 
-class SetupFixtureFailedUnroll extends Specification {
+class SetupFixtureFailedParametersUnroll extends Specification {
 
     def setup() {
         throw new IllegalStateException("Fail!")

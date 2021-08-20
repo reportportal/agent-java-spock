@@ -22,7 +22,7 @@ import com.epam.reportportal.service.Launch;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.ReportPortalSpockListener;
-import com.epam.reportportal.spock.features.fixtures.SetupFixtureFailedUnroll;
+import com.epam.reportportal.spock.features.fixtures.SetupFixtureFailedParametersUnroll;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
@@ -44,7 +44,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
 
-public class TestUnrollSetupFixtureFailureIntegrity {
+public class TestUnrollParametersSetupFixtureFailureIntegrity {
 	private final String classId = CommonUtils.namedId("class_");
 	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(6).collect(Collectors.toList());
 
@@ -59,7 +59,7 @@ public class TestUnrollSetupFixtureFailureIntegrity {
 
 	@Test
 	public void verify_setup_fixture_failure_correct_reporting_unrolled_feature() {
-		Result result = runClasses(SetupFixtureFailedUnroll.class);
+		Result result = runClasses(SetupFixtureFailedParametersUnroll.class);
 
 		assertThat(result.getFailureCount(), equalTo(3));
 
@@ -83,17 +83,13 @@ public class TestUnrollSetupFixtureFailureIntegrity {
 
 		List<FinishTestItemRQ> finishItems = finishCaptor.getAllValues();
 		List<String> statuses = finishItems.stream().map(FinishTestItemRQ::getStatus).collect(Collectors.toList());
-		assertThat(
-				statuses,
-				containsInAnyOrder(
-						ItemStatus.FAILED.name(),
-						ItemStatus.FAILED.name(),
-						ItemStatus.FAILED.name(),
-						ItemStatus.SKIPPED.name(),
-						ItemStatus.SKIPPED.name(),
-						ItemStatus.SKIPPED.name()
-				)
-		);
+		assertThat(statuses, containsInAnyOrder(ItemStatus.FAILED.name(),
+				ItemStatus.FAILED.name(),
+				ItemStatus.FAILED.name(),
+				ItemStatus.SKIPPED.name(),
+				ItemStatus.SKIPPED.name(),
+				ItemStatus.SKIPPED.name()
+		));
 		finishItems.forEach(i -> assertThat(i.getEndTime(), notNullValue()));
 		finishItems.stream()
 				.filter(i -> ItemStatus.SKIPPED.name().equals(i.getStatus()))
