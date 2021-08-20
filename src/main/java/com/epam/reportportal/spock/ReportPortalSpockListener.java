@@ -20,7 +20,6 @@ import com.epam.reportportal.exception.ReportPortalException;
 import com.epam.reportportal.listeners.ItemStatus;
 import com.epam.reportportal.listeners.ListenerParameters;
 import com.epam.reportportal.service.Launch;
-import com.epam.reportportal.service.LoggingContext;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.item.TestCaseIdEntry;
 import com.epam.reportportal.utils.MemoizingSupplier;
@@ -35,12 +34,12 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import io.reactivex.Maybe;
 import org.apache.commons.lang3.tuple.Pair;
+import org.codehaus.groovy.runtime.StackTraceUtils;
 import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spockframework.runtime.AbstractRunListener;
 import org.spockframework.runtime.model.*;
-import org.spockframework.util.ExceptionUtil;
 
 import java.lang.reflect.Method;
 import java.util.*;
@@ -138,21 +137,20 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		String fixtureDisplayName = getFixtureDisplayName(fixture, isFixtureInherited);
 		MethodKind kind = fixture.getKind();
 		StartTestItemRQ rq = createBaseStartTestItemRQ(fixtureDisplayName, ITEM_TYPES_REGISTRY.get(kind));
-		try {
-			if (registeredFeatureId != null && kind == CLEANUP) {
-				LoggingContext.complete();
-			}
+		Maybe<String> testItemId = this.launch.get().startTestItem(specFootprint.getId(), rq);
+		NodeFootprint fixtureOwnerFootprint = findFixtureOwner(fixture);
+		fixtureOwnerFootprint.addFixtureFootprint(new FixtureFootprint(fixture, testItemId));
+	}
 
-			Maybe<String> testItemId = this.launch.get().startTestItem(specFootprint.getId(), rq);
-			NodeFootprint fixtureOwnerFootprint = findFixtureOwner(fixture);
-			fixtureOwnerFootprint.addFixtureFootprint(new FixtureFootprint(fixture, testItemId));
-		} catch (ReportPortalException ex) {
-			handleRpException(ex, "Unable to start '" + fixtureDisplayName + "' fixture");
-		}
+	protected void reportFeatureStart(Maybe<String> parentId, FeatureInfo featureInfo) {
+		StartTestItemRQ rq = createFeatureItemRQ(featureInfo);
+		Maybe<String> testItemId = launch.get().startTestItem(parentId, rq);
+		registeredFeatureId = testItemId;
+		launchContext.addRunningFeature(testItemId, featureInfo);
 	}
 
 	public void registerFeature(FeatureInfo feature) {
-		if (isMonolithicParametrizedFeature(feature) && !feature.isSkipped()) {
+		if (!feature.isReportIterations()) {
 			reportFeatureStart(launchContext.findSpecFootprint(feature.getSpec()).getId(), feature);
 		} else if (!feature.isSkipped()) {
 			launchContext.addRunningFeature(null, feature);
@@ -160,14 +158,14 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	}
 
 	public void registerIteration(IterationInfo iteration) {
-		if (isMonolithicParametrizedFeature(iteration.getFeature())) {
-			reportIterationStart(launchContext.findFeatureFootprint(iteration.getFeature()).getId(),
-					createNestedIterationItemRQ(iteration),
-					iteration
-			);
-		} else {
+		if (iteration.getFeature().isReportIterations()) {
 			reportIterationStart(launchContext.findSpecFootprint(iteration.getFeature().getSpec()).getId(),
 					createIterationItemRQ(iteration),
+					iteration
+			);
+		} else if (iteration.getFeature().isParameterized()) {
+			reportIterationStart(launchContext.findFeatureFootprint(iteration.getFeature()).getId(),
+					createNestedIterationItemRQ(iteration),
 					iteration
 			);
 		}
@@ -200,7 +198,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 				status = StatusEvaluation.evaluateStatus(status, childItem.getStatus().orElse(null));
 			}
 			return ofNullable(status).map(Enum::name).orElseGet(() -> {
-				LOGGER.error("Unable to calculate status for feature");
+				LOGGER.error("Unable to calculate status for feature", new IllegalStateException());
 				return FAILED.name();
 			});
 		}));
@@ -216,20 +214,24 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	}
 
 	public void publishIterationResult(IterationInfo iteration) {
+		FeatureInfo feature = iteration.getFeature();
+		if (!feature.isReportIterations() && !feature.isParameterized()) {
+			return;
+		}
 		ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(iteration);
 		reportIterationFinish(footprint);
 		registeredFeatureId = null;
 	}
 
 	public void publishFeatureResult(FeatureInfo feature) {
-		if (isMonolithicParametrizedFeature(feature)) {
-			ReportableItemFootprint<FeatureInfo> footprint = launchContext.findFeatureFootprint(feature);
-			reportFeatureFinish(footprint);
-		} else {
+		if (feature.isReportIterations()) {
 			Iterable<? extends ReportableItemFootprint<IterationInfo>> iterations = launchContext.findIterationFootprints(feature);
 			StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterations.iterator(), Spliterator.SIZED), false)
 					.filter(IS_NOT_PUBLISHED)
 					.forEach(this::reportTestItemFinish);
+		} else {
+			ReportableItemFootprint<FeatureInfo> footprint = launchContext.findFeatureFootprint(feature);
+			reportFeatureFinish(footprint);
 		}
 	}
 
@@ -244,47 +246,35 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		reportTestItemFinish(specFootprint);
 	}
 
+	public void reportFixtureError(ErrorInfo error) {
+		MethodInfo method = error.getMethod();
+		NodeFootprint ownerFootprint = findFixtureOwner(error.getMethod());
+		ReportableItemFootprint<MethodInfo> fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(method);
+		fixtureFootprint.setStatus(FAILED);
+		Throwable exception = error.getException();
+		LoggerFactory.getLogger(error.getMethod().getReflection().getDeclaringClass())
+				.error(exception.getLocalizedMessage(), StackTraceUtils.deepSanitize(exception));
+	}
+
+	protected void logError(ErrorInfo error) {
+		Throwable exception = error.getException();
+		LoggerFactory.getLogger(error.getMethod().getReflection().getDeclaringClass()).error(exception.getLocalizedMessage(), exception);
+	}
+
 	public void reportError(ErrorInfo error) {
-		MethodInfo errorSource = error.getMethod();
-		SpecInfo sourceSpec = errorSource.getParent();
-		MethodKind errorSourceKind = errorSource.getKind();
-		ReportableItemFootprint errorSourceFootprint = null;
-
-		if (FEATURE.equals(errorSourceKind)) {
-			IterationInfo iterationInfo = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentIteration();
-			errorSourceFootprint = launchContext.findIterationFootprint(iterationInfo);
-
-		} else if (SHARED_INITIALIZER.equals(errorSourceKind)) {
-
-			// Explicitly register specification here, because in the case of
-			// shared initializer error appropriate listener method isn't triggered
-
-			registerSpec(sourceSpec);
-			errorSourceFootprint = launchContext.findSpecFootprint(sourceSpec);
-
-		} else if (DATA_PROCESSOR.equals(errorSourceKind) || INITIALIZER.equals(errorSourceKind)) {
-			FeatureInfo featureInfo = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentFeature();
-			IterationInfo maskedIteration = buildIterationMaskForFeature(featureInfo);
-			registerIteration(maskedIteration);
-			errorSourceFootprint = launchContext.findIterationFootprint(maskedIteration);
-
-		} else if (errorSourceKind.isSpecScopedFixtureMethod()) {
-			NodeFootprint originalSpecFootprint = launchContext.findSpecFootprint(sourceSpec);
-			errorSourceFootprint = originalSpecFootprint.findFixtureFootprint(errorSource);
-
-		} else if (errorSourceKind.isFeatureScopedFixtureMethod()) {
-			IterationInfo runningIteration = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentIteration();
-			NodeFootprint originalIterationFootprint = launchContext.findIterationFootprint(runningIteration);
-			errorSourceFootprint = originalIterationFootprint.findFixtureFootprint(errorSource);
-		} else {
-			LOGGER.warn("Unable to handle error of type {}", errorSourceKind);
-		}
-
-		if (errorSourceFootprint != null) {
-			if (IS_NOT_PUBLISHED.test(errorSourceFootprint)) {
-				errorSourceFootprint.setStatus(FAILED);
-				reportTestItemFailure(error);
-			}
+		MethodInfo method = error.getMethod();
+		MethodKind kind = error.getMethod().getKind();
+		if (FEATURE == kind || FEATURE_EXECUTION == kind) {
+			ofNullable(launchContext.findFeatureFootprint(method.getFeature())).ifPresent(f -> f.setStatus(FAILED));
+			ofNullable(launchContext.getRuntimePointerForSpec(method.getParent())
+					.getCurrentIteration()).map(launchContext::findIterationFootprint).ifPresent(i -> i.setStatus(FAILED));
+			logError(error);
+		} else if (ITERATION_EXECUTION == kind) {
+			ofNullable(launchContext.findIterationFootprint(method.getIteration())).ifPresent(i -> i.setStatus(FAILED));
+			logError(error);
+		} else if (SPEC_EXECUTION == kind) {
+			ofNullable(launchContext.findSpecFootprint(error.getMethod().getFeature().getSpec())).ifPresent(s -> s.setStatus(FAILED));
+			logError(error);
 		}
 	}
 
@@ -323,24 +313,10 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
-	protected void reportFeatureStart(Maybe<String> parentId, FeatureInfo featureInfo) {
-		StartTestItemRQ rq = createFeatureItemRQ(featureInfo);
-		Maybe<String> testItemId = launch.get().startTestItem(parentId, rq);
-		registeredFeatureId = testItemId;
-		launchContext.addRunningFeature(testItemId, featureInfo);
-	}
-
 	protected void reportIterationStart(Maybe<String> id, StartTestItemRQ rq, IterationInfo iteration) {
 		Maybe<String> testItemId = launch.get().startTestItem(id, rq);
 		registeredFeatureId = testItemId;
 		launchContext.addRunningIteration(testItemId, iteration);
-	}
-
-	void reportTestItemFailure(final ErrorInfo errorInfo) {
-		String message = "Exception: " + ExceptionUtil.printStackTrace(errorInfo.getException());
-		String level = "ERROR";
-		Date time = Calendar.getInstance().getTime();
-		ReportPortal.emitLog(message, level, time);
 	}
 
 	void handleRpException(ReportPortalException rpException, String message) {
@@ -369,8 +345,8 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		if (kind.isSpecScopedFixtureMethod()) {
 			return launchContext.findSpecFootprint(sourceSpec);
 		} else {
-			IterationInfo currentIteration = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentIteration();
-			return launchContext.findIterationFootprint(currentIteration);
+			FeatureInfo featureInfo = fixture.getFeature();
+			return launchContext.findFeatureFootprint(featureInfo);
 		}
 	}
 
@@ -461,10 +437,6 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		rq.setHasStats(false);
 
 		return rq;
-	}
-
-	static boolean isMonolithicParametrizedFeature(FeatureInfo feature) {
-		return feature.isParameterized() && !feature.isReportIterations();
 	}
 
 	@Override

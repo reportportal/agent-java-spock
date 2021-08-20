@@ -1,5 +1,6 @@
 package com.epam.reportportal.spock;
 
+import org.codehaus.groovy.runtime.StackTraceUtils;
 import org.spockframework.runtime.extension.IMethodInterceptor;
 import org.spockframework.runtime.extension.IMethodInvocation;
 import org.spockframework.runtime.model.ErrorInfo;
@@ -28,7 +29,7 @@ class FixtureInterceptor implements IMethodInterceptor {
 		} catch (Throwable ex) {
 			// explicitly report exception to has an ability to track error
 			// before result publishing
-			spockService.reportError(new ErrorInfo(invocation.getMethod(), ex));
+			spockService.reportFixtureError(new ErrorInfo(invocation.getMethod(), ex));
 			throw ex;
 		} finally {
 			spockService.publishFixtureResult(invocation.getMethod());
