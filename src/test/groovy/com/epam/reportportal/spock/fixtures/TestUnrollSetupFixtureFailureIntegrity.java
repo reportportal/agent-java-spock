@@ -22,7 +22,7 @@ import com.epam.reportportal.service.Launch;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.ReportPortalSpockListener;
-import com.epam.reportportal.spock.features.fixtures.SetupFixtureFailed;
+import com.epam.reportportal.spock.features.fixtures.SetupFixtureFailedUnroll;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
@@ -44,9 +44,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
 
-public class TestSetupFixtureFailureIntegrity {
+public class TestUnrollSetupFixtureFailureIntegrity {
 	private final String classId = CommonUtils.namedId("class_");
-	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(2).collect(Collectors.toList());
+	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(6).collect(Collectors.toList());
 
 	private final ReportPortalClient client = mock(ReportPortalClient.class);
 
@@ -58,27 +58,42 @@ public class TestSetupFixtureFailureIntegrity {
 	}
 
 	@Test
-	public void verify_setup_fixture_failure_correct_reporting() {
-		Result result = runClasses(SetupFixtureFailed.class);
+	public void verify_setup_fixture_failure_correct_reporting_unrolled_feature() {
+		Result result = runClasses(SetupFixtureFailedUnroll.class);
 
-		assertThat(result.getFailureCount(), equalTo(1));
+		assertThat(result.getFailureCount(), equalTo(3));
 
 		verify(client).startLaunch(any());
 		verify(client).startTestItem(any(StartTestItemRQ.class));
 		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
-		verify(client, times(2)).startTestItem(same(classId), startCaptor.capture());
+		verify(client, times(6)).startTestItem(same(classId), startCaptor.capture());
 
 		List<StartTestItemRQ> startItems = startCaptor.getAllValues();
 		List<String> stepTypes = startItems.stream().map(StartTestItemRQ::getType).collect(Collectors.toList());
-		assertThat(stepTypes, containsInAnyOrder(ItemType.STEP.name(), ItemType.BEFORE_METHOD.name()));
+		assertThat(stepTypes, containsInAnyOrder(ItemType.STEP.name(),
+				ItemType.STEP.name(),
+				ItemType.STEP.name(),
+				ItemType.BEFORE_METHOD.name(),
+				ItemType.BEFORE_METHOD.name(),
+				ItemType.BEFORE_METHOD.name()
+		));
 
 		ArgumentCaptor<FinishTestItemRQ> finishCaptor = ArgumentCaptor.forClass(FinishTestItemRQ.class);
-		verify(client).finishTestItem(eq(methodIds.get(0)), finishCaptor.capture());
-		verify(client).finishTestItem(eq(methodIds.get(1)), finishCaptor.capture());
+		methodIds.forEach(id -> verify(client).finishTestItem(eq(id), finishCaptor.capture()));
 
 		List<FinishTestItemRQ> finishItems = finishCaptor.getAllValues();
 		List<String> statuses = finishItems.stream().map(FinishTestItemRQ::getStatus).collect(Collectors.toList());
-		assertThat(statuses, containsInAnyOrder(ItemStatus.FAILED.name(), ItemStatus.SKIPPED.name()));
+		assertThat(
+				statuses,
+				containsInAnyOrder(
+						ItemStatus.FAILED.name(),
+						ItemStatus.FAILED.name(),
+						ItemStatus.FAILED.name(),
+						ItemStatus.SKIPPED.name(),
+						ItemStatus.SKIPPED.name(),
+						ItemStatus.SKIPPED.name()
+				)
+		);
 		finishItems.forEach(i -> assertThat(i.getEndTime(), notNullValue()));
 		finishItems.stream()
 				.filter(i -> ItemStatus.SKIPPED.name().equals(i.getStatus()))
@@ -86,7 +101,7 @@ public class TestSetupFixtureFailureIntegrity {
 
 		verify(client).finishTestItem(eq(classId), any());
 		//noinspection unchecked
-		verify(client).log(any(List.class));
+		verify(client, atLeastOnce()).log(any(List.class));
 		verifyNoMoreInteractions(client);
 	}
 }

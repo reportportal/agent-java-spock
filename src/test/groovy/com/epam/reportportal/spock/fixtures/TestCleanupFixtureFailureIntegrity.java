@@ -22,7 +22,6 @@ import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.ReportPortalSpockListener;
 import com.epam.reportportal.spock.features.fixtures.CleanupFixtureFailed;
-import com.epam.reportportal.spock.features.fixtures.SetupFixtureFailed;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
@@ -79,9 +78,13 @@ public class TestCleanupFixtureFailureIntegrity {
 		List<FinishTestItemRQ> finishItems = finishCaptor.getAllValues();
 		List<String> statuses = finishItems.stream().map(FinishTestItemRQ::getStatus).collect(Collectors.toList());
 		assertThat(statuses, containsInAnyOrder(ItemStatus.FAILED.name(), ItemStatus.PASSED.name()));
-		finishItems.forEach(i-> assertThat(i.getEndTime(), notNullValue()));
+		finishItems.forEach(i -> {
+			assertThat(i.getEndTime(), notNullValue());
+			assertThat(i.getIssue(), nullValue());
+		});
 
 		verify(client).finishTestItem(eq(classId), any());
+		//noinspection unchecked
 		verify(client).log(any(List.class));
 		verifyNoMoreInteractions(client);
 	}

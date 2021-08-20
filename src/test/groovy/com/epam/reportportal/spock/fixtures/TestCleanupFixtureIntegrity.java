@@ -80,6 +80,7 @@ public class TestCleanupFixtureIntegrity {
 		finishItems.forEach(i-> {
 			assertThat(i.getEndTime(), notNullValue());
 			assertThat(i.getStatus(), equalTo(ItemStatus.PASSED.name()));
+			assertThat(i.getIssue(), nullValue());
 		});
 
 		verify(client).finishTestItem(eq(classId), any());

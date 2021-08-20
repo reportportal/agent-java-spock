@@ -48,8 +48,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
-import static com.epam.reportportal.listeners.ItemStatus.FAILED;
-import static com.epam.reportportal.listeners.ItemStatus.SKIPPED;
+import static com.epam.reportportal.listeners.ItemStatus.*;
 import static com.epam.reportportal.spock.NodeInfoUtils.*;
 import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISHED;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -179,19 +178,27 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	protected void reportIterationFinish(ReportableItemFootprint<IterationInfo> footprint) {
 		FinishTestItemRQ rq = getFinishTestItemRq();
-		if (footprint.getStatus().isPresent()) {
-			rq.setStatus(footprint.getStatus().get().name());
-		} else {
-			rq.setStatus(ItemStatus.PASSED.name());
+		rq.setStatus(footprint.getStatus().map(s -> {
+			if (SKIPPED == s) {
+				rq.setIssue(Launch.NOT_ISSUE);
+			}
+			return s.name();
+		}).orElseGet(() -> {
 			footprint.setStatus(ItemStatus.PASSED);
-		}
+			return PASSED.name();
+		}));
 		launch.get().finishTestItem(footprint.getId(), rq);
 		footprint.markAsPublished();
 	}
 
 	protected void reportFeatureFinish(ReportableItemFootprint<FeatureInfo> footprint) {
 		FinishTestItemRQ rq = getFinishTestItemRq();
-		rq.setStatus(footprint.getStatus().map(Enum::name).orElseGet(() -> {
+		rq.setStatus(footprint.getStatus().map(s -> {
+			if (SKIPPED == s) {
+				rq.setIssue(Launch.NOT_ISSUE);
+			}
+			return s.name();
+		}).orElseGet(() -> {
 			FeatureInfo feature = footprint.getItem();
 			ItemStatus status = ItemStatus.PASSED;
 			for (NodeFootprint<IterationInfo> childItem : launchContext.findIterationFootprints(feature)) {
@@ -249,6 +256,15 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	public void reportFixtureError(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, ErrorInfo error) {
 		MethodInfo method = error.getMethod();
 		NodeFootprint ownerFootprint = findFixtureOwner(feature, error.getMethod());
+		MethodKind kind = method.getKind();
+		if (!kind.isCleanupMethod()) {
+			if (feature.isReportIterations()) {
+				NodeFootprint<IterationInfo> iterationFootprint = launchContext.findIterationFootprint(iteration);
+				iterationFootprint.setStatus(SKIPPED);
+			} else {
+				ownerFootprint.setStatus(SKIPPED);
+			}
+		}
 		ReportableItemFootprint<MethodInfo> fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(method);
 		fixtureFootprint.setStatus(FAILED);
 		Throwable exception = error.getException();
