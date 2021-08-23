@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package com.epam.reportportal.spock.testcaseid;
+package com.epam.reportportal.spock.nestedsteps;
 
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.ReportPortalSpockListener;
-import com.epam.reportportal.spock.features.HelloSpockSpecUnroll;
+import com.epam.reportportal.spock.features.OrderedInteractionsSpec;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
@@ -27,47 +27,39 @@ import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.Result;
-import org.mockito.ArgumentCaptor;
-
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.epam.reportportal.spock.utils.TestUtils.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
 
-public class TestCaseIdParameterizedTest {
-
+public class TestNoNestedStepsWhenNoParameters {
 	private final String classId = CommonUtils.namedId("class_");
-	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(3).collect(Collectors.toList());
+	private final String methodId = CommonUtils.namedId("method_");
 
 	private final ReportPortalClient client = mock(ReportPortalClient.class);
 
 	@BeforeEach
 	public void setupMock() {
-		TestUtils.mockLaunch(client, null, classId, methodIds);
+		TestUtils.mockLaunch(client, null, classId, methodId);
 		TestUtils.mockBatchLogging(client);
 		TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(client, standardParameters(), testExecutor()));
 	}
 
 	@Test
-	public void verify_test_case_id_unroll_feature_generation() {
-		Result result = runClasses(HelloSpockSpecUnroll.class);
+	public void verify_no_nested_steps_reported() {
+		Result result = runClasses(OrderedInteractionsSpec.class);
 
 		assertThat(result.getFailureCount(), equalTo(0));
 
-		verify(client).startTestItem(any());
-		ArgumentCaptor<StartTestItemRQ> captor = ArgumentCaptor.forClass(StartTestItemRQ.class);
-		verify(client, times(3)).startTestItem(same(classId), captor.capture());
+		verify(client).startLaunch(any());
+		verify(client).startTestItem(any(StartTestItemRQ.class));
+		verify(client).startTestItem(same(classId), any(StartTestItemRQ.class));
 
-		List<String> items = captor.getAllValues().stream().map(StartTestItemRQ::getTestCaseId).collect(Collectors.toList());
-		assertThat(items, hasSize(3));
-
-		String staticPart = HelloSpockSpecUnroll.class.getCanonicalName() + "." + HelloSpockSpecUnroll.TEST_NAME;
-		assertThat(items, containsInAnyOrder(staticPart + "[Spock,5]", staticPart + "[Kirk,4]", staticPart + "[Scotty,6]"));
+		verify(client).finishTestItem(eq(methodId), any());
+		verify(client).finishTestItem(eq(classId), any());
+		verifyNoMoreInteractions(client);
 	}
 }

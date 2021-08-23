@@ -1,6 +1,14 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- Iterations as nested steps reporting
+- Parameters support
+- Ignore fixture functionality support
+### Fixed
+- Iterations now fail parent feature
+- Unrolled step description
+- Fixture reporting
 
 ## [5.1.0-BETA-3]
 ### Added

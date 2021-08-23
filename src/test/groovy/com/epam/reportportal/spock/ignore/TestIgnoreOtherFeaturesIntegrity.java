@@ -14,21 +14,25 @@
  * limitations under the License.
  */
 
-package com.epam.reportportal.spock.testcaseid;
+package com.epam.reportportal.spock.ignore;
 
+import com.epam.reportportal.listeners.ItemStatus;
+import com.epam.reportportal.listeners.ItemType;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.ReportPortalSpockListener;
-import com.epam.reportportal.spock.features.HelloSpockSpecUnroll;
+import com.epam.reportportal.spock.features.ignore.TestRestFeaturesIgnore;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
+import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.Result;
 import org.mockito.ArgumentCaptor;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -40,8 +44,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
 
-public class TestCaseIdParameterizedTest {
-
+public class TestIgnoreOtherFeaturesIntegrity {
 	private final String classId = CommonUtils.namedId("class_");
 	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(3).collect(Collectors.toList());
 
@@ -55,19 +58,44 @@ public class TestCaseIdParameterizedTest {
 	}
 
 	@Test
-	public void verify_test_case_id_unroll_feature_generation() {
-		Result result = runClasses(HelloSpockSpecUnroll.class);
+	public void verify_ignored_feature_correct_reporting() {
+		Result result = runClasses(TestRestFeaturesIgnore.class);
 
 		assertThat(result.getFailureCount(), equalTo(0));
 
-		verify(client).startTestItem(any());
-		ArgumentCaptor<StartTestItemRQ> captor = ArgumentCaptor.forClass(StartTestItemRQ.class);
-		verify(client, times(3)).startTestItem(same(classId), captor.capture());
+		verify(client).startLaunch(any());
+		verify(client).startTestItem(any(StartTestItemRQ.class));
+		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
+		verify(client, times(3)).startTestItem(same(classId), startCaptor.capture());
 
-		List<String> items = captor.getAllValues().stream().map(StartTestItemRQ::getTestCaseId).collect(Collectors.toList());
-		assertThat(items, hasSize(3));
+		List<StartTestItemRQ> startItems = startCaptor.getAllValues();
+		List<String> stepTypes = startItems.stream().map(StartTestItemRQ::getType).collect(Collectors.toList());
+		assertThat(stepTypes, equalTo(Collections.nCopies(3, ItemType.STEP.name())));
 
-		String staticPart = HelloSpockSpecUnroll.class.getCanonicalName() + "." + HelloSpockSpecUnroll.TEST_NAME;
-		assertThat(items, containsInAnyOrder(staticPart + "[Spock,5]", staticPart + "[Kirk,4]", staticPart + "[Scotty,6]"));
+		ArgumentCaptor<FinishTestItemRQ> finishCaptor = ArgumentCaptor.forClass(FinishTestItemRQ.class);
+		methodIds.forEach(id -> verify(client).finishTestItem(eq(id), finishCaptor.capture()));
+
+		List<FinishTestItemRQ> passedFeatures = finishCaptor.getAllValues()
+				.stream()
+				.filter(i -> ItemStatus.PASSED.name().equals(i.getStatus()))
+				.collect(Collectors.toList());
+		assertThat(passedFeatures, hasSize(1));
+		FinishTestItemRQ passedFeature = passedFeatures.get(0);
+		assertThat(passedFeature.getIssue(), nullValue());
+		assertThat(passedFeature.getEndTime(), notNullValue());
+
+		List<FinishTestItemRQ> ignoredFeatures = finishCaptor.getAllValues()
+				.stream()
+				.filter(i -> ItemStatus.SKIPPED.name().equals(i.getStatus()))
+				.collect(Collectors.toList());
+		assertThat(ignoredFeatures, hasSize(2));
+
+		ignoredFeatures.forEach(i -> {
+			assertThat(i.getIssue(), nullValue());
+			assertThat(i.getEndTime(), notNullValue());
+		});
+
+		verify(client).finishTestItem(eq(classId), any());
+		verifyNoMoreInteractions(client);
 	}
 }

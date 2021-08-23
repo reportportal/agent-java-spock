@@ -20,41 +20,41 @@ import com.epam.reportportal.exception.ReportPortalException;
 import com.epam.reportportal.listeners.ItemStatus;
 import com.epam.reportportal.listeners.ListenerParameters;
 import com.epam.reportportal.service.Launch;
-import com.epam.reportportal.service.LoggingContext;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.item.TestCaseIdEntry;
 import com.epam.reportportal.utils.MemoizingSupplier;
+import com.epam.reportportal.utils.ParameterUtils;
+import com.epam.reportportal.utils.StatusEvaluation;
 import com.epam.reportportal.utils.TestCaseIdUtils;
 import com.epam.ta.reportportal.ws.model.FinishExecutionRQ;
 import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
-import com.epam.ta.reportportal.ws.model.issue.Issue;
 import com.epam.ta.reportportal.ws.model.launch.StartLaunchRQ;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import io.reactivex.Maybe;
+import org.apache.commons.lang3.tuple.Pair;
+import org.codehaus.groovy.runtime.StackTraceUtils;
 import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spockframework.runtime.AbstractRunListener;
 import org.spockframework.runtime.model.*;
-import org.spockframework.util.ExceptionUtil;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.lang.reflect.Method;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
-import static com.epam.reportportal.listeners.ItemStatus.FAILED;
-import static com.epam.reportportal.listeners.ItemStatus.SKIPPED;
-import static com.epam.reportportal.spock.NodeInfoUtils.buildIterationDescription;
-import static com.epam.reportportal.spock.NodeInfoUtils.getFixtureDisplayName;
+import static com.epam.reportportal.listeners.ItemStatus.*;
+import static com.epam.reportportal.spock.NodeInfoUtils.*;
 import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISHED;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
-import static com.google.common.collect.Iterables.getFirst;
-import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 import static org.spockframework.runtime.model.MethodKind.*;
 
@@ -66,10 +66,6 @@ import static org.spockframework.runtime.model.MethodKind.*;
 public class ReportPortalSpockListener extends AbstractRunListener {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(ReportPortalSpockListener.class);
-	private static final Object[] NOT_PROVIDED = new Object[] { "NOT_PROVIDED" };
-
-	public static final String NOT_ISSUE = "NOT_ISSUE";
-	private final AtomicBoolean isLaunchFailed = new AtomicBoolean();
 	private final MemoizingSupplier<Launch> launch;
 
 	// stores the bindings of Spock method kinds to the RP-specific notation
@@ -84,7 +80,6 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	private ListenerParameters launchParameters;
 	private final AbstractLaunchContext launchContext;
-	private Maybe<String> registeredFeatureId = null;
 
 	public ReportPortalSpockListener() {
 		this(ReportPortal.builder().build());
@@ -136,66 +131,105 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		launchContext.addRunningSpec(testItemId, spec);
 	}
 
-	public void registerFixture(MethodInfo fixture) {
-		NodeFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(fixture.getParent());
+	public void registerFixture(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
+		NodeFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
 		boolean isFixtureInherited = !fixture.getParent().equals(specFootprint.getItem());
 		String fixtureDisplayName = getFixtureDisplayName(fixture, isFixtureInherited);
 		MethodKind kind = fixture.getKind();
 		StartTestItemRQ rq = createBaseStartTestItemRQ(fixtureDisplayName, ITEM_TYPES_REGISTRY.get(kind));
-		try {
-			if (registeredFeatureId != null && kind == CLEANUP) {
-				LoggingContext.complete();
-			}
-
-			Maybe<String> testItemId = this.launch.get().startTestItem(specFootprint.getId(), rq);
-			NodeFootprint fixtureOwnerFootprint = findFixtureOwner(fixture);
-			fixtureOwnerFootprint.addFixtureFootprint(new FixtureFootprint(fixture, testItemId));
-		} catch (ReportPortalException ex) {
-			handleRpException(ex, "Unable to start '" + fixtureDisplayName + "' fixture");
+		Maybe<String> testItemId;
+		if (kind.isFeatureScopedFixtureMethod() && !feature.isReportIterations() && feature.isParameterized()) {
+			rq.setHasStats(false);
+			testItemId = launch.get().startTestItem(launchContext.findFeatureFootprint(feature).getId(), rq);
+		} else {
+			testItemId = launch.get().startTestItem(specFootprint.getId(), rq);
 		}
+		@SuppressWarnings("rawtypes")
+		NodeFootprint<? extends NodeInfo> fixtureOwnerFootprint = findFixtureOwner(spec, feature, iteration, fixture);
+		fixtureOwnerFootprint.addFixtureFootprint(new FixtureFootprint(fixture, testItemId));
+	}
+
+	protected void reportFeatureStart(Maybe<String> parentId, FeatureInfo featureInfo) {
+		StartTestItemRQ rq = createFeatureItemRQ(featureInfo);
+		Maybe<String> testItemId = launch.get().startTestItem(parentId, rq);
+		launchContext.addRunningFeature(testItemId, featureInfo);
 	}
 
 	public void registerFeature(FeatureInfo feature) {
-		launchContext.addRunningFeature(feature);
-		if (isMonolithicParametrizedFeature(feature) && !feature.isSkipped()) {
-			IterationInfo maskedIteration = buildIterationMaskForFeature(feature);
-			reportIterationStart(maskedIteration);
+		if (!feature.isReportIterations()) {
+			reportFeatureStart(launchContext.findSpecFootprint(feature.getSpec()).getId(), feature);
+		} else if (!feature.isSkipped()) {
+			launchContext.addRunningFeature(null, feature);
 		}
 	}
 
 	public void registerIteration(IterationInfo iteration) {
-		if (isMonolithicParametrizedFeature(iteration.getFeature())) {
-			return;
-		}
-		reportIterationStart(iteration);
-	}
-
-	public void publishIterationResult(IterationInfo iteration) {
-		FeatureInfo feature = iteration.getFeature();
-		if (!isMonolithicParametrizedFeature(feature)) {
-			ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(iteration);
-			reportTestItemFinish(footprint);
-			registeredFeatureId = null;
+		if (iteration.getFeature().isReportIterations()) {
+			reportIterationStart(launchContext.findSpecFootprint(iteration.getFeature().getSpec()).getId(),
+					createIterationItemRQ(iteration),
+					iteration
+			);
+		} else if (iteration.getFeature().isParameterized()) {
+			reportIterationStart(launchContext.findFeatureFootprint(iteration.getFeature()).getId(),
+					createNestedIterationItemRQ(iteration),
+					iteration
+			);
 		}
 	}
 
-	public void publishFeatureResult(FeatureInfo feature) {
-		if (isMonolithicParametrizedFeature(feature)) {
-			ReportableItemFootprint<IterationInfo> footprint = getFirst(launchContext.findIterationFootprints(feature), null);
-			assert footprint != null;
-			reportTestItemFinish(footprint);
-		} else {
-			Iterable<? extends ReportableItemFootprint<IterationInfo>> iterations = launchContext.findIterationFootprints(feature);
-			StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterations.iterator(), Spliterator.SIZED), false)
-					.filter(IS_NOT_PUBLISHED)
-					.forEach(this::reportTestItemFinish);
-		}
+	protected FinishTestItemRQ getFinishTestItemRq() {
+		FinishTestItemRQ rq = new FinishTestItemRQ();
+		rq.setEndTime(Calendar.getInstance().getTime());
+		return rq;
 	}
 
-	public void publishFixtureResult(MethodInfo fixture) {
-		NodeFootprint ownerFootprint = findFixtureOwner(fixture);
-		ReportableItemFootprint fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(fixture);
-		reportTestItemFinish(fixtureFootprint);
+	protected void reportIterationFinish(ReportableItemFootprint<IterationInfo> footprint) {
+		FinishTestItemRQ rq = getFinishTestItemRq();
+		rq.setStatus(footprint.getStatus().map(s -> {
+			if (SKIPPED == s) {
+				rq.setIssue(Launch.NOT_ISSUE);
+			}
+			return s.name();
+		}).orElseGet(() -> {
+			footprint.setStatus(ItemStatus.PASSED);
+			return PASSED.name();
+		}));
+		launch.get().finishTestItem(footprint.getId(), rq);
+		footprint.markAsPublished();
+	}
+
+	protected void reportFeatureFinish(ReportableItemFootprint<FeatureInfo> footprint) {
+		FinishTestItemRQ rq = getFinishTestItemRq();
+		rq.setStatus(footprint.getStatus().map(s -> {
+			if (SKIPPED == s) {
+				rq.setIssue(Launch.NOT_ISSUE);
+			}
+			return s.name();
+		}).orElseGet(() -> {
+			FeatureInfo feature = footprint.getItem();
+			ItemStatus status = ItemStatus.PASSED;
+			for (NodeFootprint<IterationInfo> childItemFootprint : launchContext.findIterationFootprints(feature)) {
+				for (ReportableItemFootprint<MethodInfo> fixtureFootprint : childItemFootprint.getFixtures()) {
+					if (fixtureFootprint.getItem().getKind().isSetupMethod()) {
+						status = StatusEvaluation.evaluateStatus(status, fixtureFootprint.getStatus().orElse(null));
+					}
+				}
+				status = StatusEvaluation.evaluateStatus(status, childItemFootprint.getStatus().orElse(null));
+			}
+			return ofNullable(status).map(Enum::name).orElseGet(() -> {
+				LOGGER.error("Unable to calculate status for feature", new IllegalStateException());
+				return FAILED.name();
+			});
+		}));
+		launch.get().finishTestItem(footprint.getId(), rq);
+		footprint.markAsPublished();
+	}
+
+	protected void reportTestItemFinish(ReportableItemFootprint<?> footprint) {
+		FinishTestItemRQ rq = getFinishTestItemRq();
+		rq.setStatus(footprint.getStatus().map(Enum::name).orElse(ItemStatus.PASSED.name()));
+		launch.get().finishTestItem(footprint.getId(), rq);
+		footprint.markAsPublished();
 	}
 
 	public void publishSpecResult(SpecInfo spec) {
@@ -203,64 +237,100 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		reportTestItemFinish(specFootprint);
 	}
 
-	public void reportError(ErrorInfo error) {
-		MethodInfo errorSource = error.getMethod();
-		SpecInfo sourceSpec = errorSource.getParent();
-		MethodKind errorSourceKind = errorSource.getKind();
-		ReportableItemFootprint errorSourceFootprint = null;
-
-		if (FEATURE.equals(errorSourceKind)) {
-			IterationInfo iterationInfo = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentIteration();
-			errorSourceFootprint = launchContext.findIterationFootprint(iterationInfo);
-
-		} else if (SHARED_INITIALIZER.equals(errorSourceKind)) {
-
-			// Explicitly register specification here, because in the case of
-			// shared initializer error appropriate listener method isn't triggered
-
-			registerSpec(sourceSpec);
-			errorSourceFootprint = launchContext.findSpecFootprint(sourceSpec);
-
-		} else if (DATA_PROCESSOR.equals(errorSourceKind) || INITIALIZER.equals(errorSourceKind)) {
-			FeatureInfo featureInfo = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentFeature();
-			IterationInfo maskedIteration = buildIterationMaskForFeature(featureInfo);
-			registerIteration(maskedIteration);
-			errorSourceFootprint = launchContext.findIterationFootprint(maskedIteration);
-
-		} else if (errorSourceKind.isSpecScopedFixtureMethod()) {
-			NodeFootprint originalSpecFootprint = launchContext.findSpecFootprint(sourceSpec);
-			errorSourceFootprint = originalSpecFootprint.findFixtureFootprint(errorSource);
-
-		} else if (errorSourceKind.isFeatureScopedFixtureMethod()) {
-			IterationInfo runningIteration = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentIteration();
-			NodeFootprint originalIterationFootprint = launchContext.findIterationFootprint(runningIteration);
-			errorSourceFootprint = originalIterationFootprint.findFixtureFootprint(errorSource);
+	public void publishFeatureResult(FeatureInfo feature) {
+		if (feature.isReportIterations()) {
+			Iterable<? extends ReportableItemFootprint<IterationInfo>> iterations = launchContext.findIterationFootprints(feature);
+			StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterations.iterator(), Spliterator.SIZED), false)
+					.filter(IS_NOT_PUBLISHED)
+					.forEach(this::reportTestItemFinish);
 		} else {
-			LOGGER.warn("Unable to handle error of type {}", errorSourceKind);
+			ReportableItemFootprint<FeatureInfo> footprint = launchContext.findFeatureFootprint(feature);
+			reportFeatureFinish(footprint);
 		}
+	}
 
-		if (errorSourceFootprint != null) {
-			if (IS_NOT_PUBLISHED.test(errorSourceFootprint)) {
-				errorSourceFootprint.setStatus(FAILED);
-				reportTestItemFailure(error);
+	public void publishIterationResult(IterationInfo iteration) {
+		FeatureInfo feature = iteration.getFeature();
+		if (!feature.isReportIterations() && !feature.isParameterized()) {
+			return;
+		}
+		ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(iteration);
+		reportIterationFinish(footprint);
+	}
+
+	@SuppressWarnings("rawtypes")
+	public void publishFixtureResult(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
+		NodeFootprint<? extends NodeInfo> ownerFootprint = findFixtureOwner(spec, feature, iteration, fixture);
+		ReportableItemFootprint<MethodInfo> fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(fixture);
+		reportTestItemFinish(fixtureFootprint);
+	}
+
+	public void reportFixtureError(@Nonnull SpecInfo spec, @Nullable FeatureInfo feature, @Nullable IterationInfo iteration,
+			@Nonnull ErrorInfo error) {
+		MethodInfo method = error.getMethod();
+		NodeFootprint<?> ownerFootprint = findFixtureOwner(spec, feature, iteration, error.getMethod());
+		MethodKind kind = method.getKind();
+		NodeFootprint<?> specFootprint = launchContext.findSpecFootprint(spec);
+		specFootprint.setStatus(FAILED);
+		if (!kind.isCleanupMethod()) {
+			if (feature != null) {
+				// Failed before / after feature
+				NodeFootprint<?> footprint;
+				if (feature.isParameterized() || feature.isReportIterations()) {
+					footprint = launchContext.findIterationFootprint(iteration);
+				} else {
+					footprint = launchContext.findFeatureFootprint(feature);
+				}
+				footprint.setStatus(SKIPPED);
+			} else {
+				// Failed before spec
+				spec.getFeatures().forEach(f -> {
+					reportFeatureStart(specFootprint.getId(), f);
+					NodeFootprint<FeatureInfo> ff = launchContext.findFeatureFootprint(f);
+					ff.setStatus(SKIPPED);
+					reportFeatureFinish(ff);
+				});
 			}
 		}
+		ReportableItemFootprint<MethodInfo> fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(method);
+		fixtureFootprint.setStatus(FAILED);
+		Throwable exception = error.getException();
+		LoggerFactory.getLogger(error.getMethod().getReflection().getDeclaringClass())
+				.error(exception.getLocalizedMessage(), StackTraceUtils.deepSanitize(exception));
 	}
 
-	public void trackSkippedFeature(FeatureInfo featureInfo) {
-		IterationInfo maskedIteration = buildIterationMaskForFeature(featureInfo);
-		reportIterationStart(maskedIteration);
-		// set skipped status in an appropriate footprint
-		ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(maskedIteration);
-		footprint.setStatus(SKIPPED);
-		// report result of masked iteration
-		reportTestItemFinish(footprint);
+	protected void logError(ErrorInfo error) {
+		Throwable exception = error.getException();
+		LoggerFactory.getLogger(error.getMethod().getReflection().getDeclaringClass()).error(exception.getLocalizedMessage(), exception);
 	}
 
-	public void trackSkippedSpec(SpecInfo spec) {
+	public void reportError(ErrorInfo error) {
+		MethodInfo method = error.getMethod();
+		MethodKind kind = error.getMethod().getKind();
+		if (FEATURE == kind || FEATURE_EXECUTION == kind) {
+			ofNullable(launchContext.findFeatureFootprint(method.getFeature())).ifPresent(f -> f.setStatus(FAILED));
+			ofNullable(launchContext.getRuntimePointerForSpec(method.getParent())
+					.getCurrentIteration()).map(launchContext::findIterationFootprint).ifPresent(i -> i.setStatus(FAILED));
+			logError(error);
+		} else if (ITERATION_EXECUTION == kind) {
+			ofNullable(launchContext.findIterationFootprint(method.getIteration())).ifPresent(i -> i.setStatus(FAILED));
+			logError(error);
+		} else if (SPEC_EXECUTION == kind) {
+			ofNullable(launchContext.findSpecFootprint(error.getMethod().getFeature().getSpec())).ifPresent(s -> s.setStatus(FAILED));
+			logError(error);
+		}
+	}
+
+	protected void trackSkippedSpec(SpecInfo spec) {
 		registerSpec(spec);
 		ReportableItemFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
 		specFootprint.setStatus(SKIPPED);
+	}
+
+	protected void trackSkippedFeature(FeatureInfo feature) {
+		reportFeatureStart(launchContext.findSpecFootprint(feature.getSpec()).getId(), feature);
+		NodeFootprint<FeatureInfo> footprint = launchContext.findFeatureFootprint(feature);
+		footprint.setStatus(SKIPPED);
 	}
 
 	public void finishLaunch() {
@@ -273,112 +343,15 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 			// finish launch
 			FinishExecutionRQ rq = createFinishExecutionRQ();
-			rq.setStatus(isLaunchFailed.get() ? FAILED.name() : ItemStatus.PASSED.name());
-
-			try {
-				launch.get().finish(rq);
-			} catch (ReportPortalException ex) {
-				handleRpException(ex, "Unable finish the launch: '" + launchContext.getLaunchId() + "'");
-			}
+			rq.setEndTime(Calendar.getInstance().getTime());
+			launch.get().finish(rq);
 			this.launch.reset();
 		}
 	}
 
-	void reportIterationStart(IterationInfo iteration) {
-		StartTestItemRQ rq = createBaseStartTestItemRQ(iteration.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
-		rq.setDescription(buildIterationDescription(iteration));
-		FeatureInfo featureInfo = iteration.getFeature();
-		Description description = featureInfo.getDescription();
-		String codeRef = description.getClassName() + "." + description.getMethodName();
-		rq.setCodeRef(codeRef);
-		Method method = featureInfo.getFeatureMethod().getReflection();
-		TestCaseId testCaseId = method.getAnnotation(TestCaseId.class);
-		List<Object> params = of(iteration.getDataValues()).map(p -> p == NOT_PROVIDED ? null : Arrays.asList(p)).orElse(null);
-		rq.setTestCaseId(ofNullable(TestCaseIdUtils.getTestCaseId(testCaseId,
-				method,
-				codeRef,
-				params
-		)).map(TestCaseIdEntry::getId).orElse(null));
-		ReportableItemFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(iteration.getFeature().getSpec());
-		try {
-			Maybe<String> testItemId = launch.get().startTestItem(specFootprint.getId(), rq);
-			registeredFeatureId = testItemId;
-			launchContext.addRunningIteration(testItemId, iteration);
-		} catch (ReportPortalException ex) {
-			handleRpException(ex, "Unable start test method: '" + iteration.getName() + "'");
-		}
-	}
-
-	void reportTestItemFinish(ReportableItemFootprint<?> footprint) {
-		FinishTestItemRQ rq = new FinishTestItemRQ();
-		rq.setEndTime(Calendar.getInstance().getTime());
-
-		// Determine whether skipped test is to be investigated or not
-		boolean failLaunch = false;
-
-		// Check if test item has SKIPPED status
-		if (footprint.getStatus().isPresent()) {
-			if (SKIPPED.equals(footprint.getStatus().get())) {
-				failLaunch = true;
-
-				// If status is SKIPPED determine whether to investigate it or not
-				if (!launch.get().getParameters().getSkippedAnIssue()) {
-					Issue issue = new Issue();
-					issue.setIssueType(NOT_ISSUE);
-					rq.setIssue(issue);
-				}
-			}
-		}
-
-		// Check if fixture items failed for an iteration - if so, then fail the iteration
-		if (footprint.getItem() != null && footprint.getItem() instanceof IterationInfo) {
-			List<ReportableItemFootprint<MethodInfo>> fixtures = ((NodeFootprint<IterationInfo>) footprint).getFixtures();
-
-			boolean fixtureError = false;
-			for (ReportableItemFootprint<MethodInfo> methodInfo : fixtures) {
-				if (methodInfo.getItem().getKind() != CLEANUP) {
-					Optional<ItemStatus> methodStatus = methodInfo.getStatus();
-
-					if (methodStatus.isPresent()) {
-						if (methodStatus.get().equals(FAILED)) {
-							fixtureError = true;
-							break;
-						}
-					}
-				}
-			}
-
-			if (fixtureError) {
-				footprint.setStatus(FAILED);
-				Issue issue = new Issue();
-				issue.setIssueType(NOT_ISSUE);
-				rq.setIssue(issue);
-			}
-		}
-
-		ItemStatus footprintStatus = calculateFootprintStatus(footprint);
-		rq.setStatus(footprintStatus.name());
-
-		if (!failLaunch) {
-			isLaunchFailed.compareAndSet(false, FAILED.equals(footprintStatus));
-		} else {
-			isLaunchFailed.set(true);
-		}
-
-		try {
-			launch.get().finishTestItem(footprint.getId(), rq);
-		} catch (ReportPortalException ex) {
-			handleRpException(ex, "Unable finish " + footprint.getClass().getSimpleName() + ": '" + footprint.getItemName() + "'");
-		} finally {
-			footprint.markAsPublished();
-		}
-	}
-
-	void reportTestItemFailure(final ErrorInfo errorInfo) {
-		String message = "Exception: " + ExceptionUtil.printStackTrace(errorInfo.getException());
-		String level = "ERROR";
-		Date time = Calendar.getInstance().getTime();
-		ReportPortal.emitLog(message, level, time);
+	protected void reportIterationStart(Maybe<String> id, StartTestItemRQ rq, IterationInfo iteration) {
+		Maybe<String> testItemId = launch.get().startTestItem(id, rq);
+		launchContext.addRunningIteration(testItemId, iteration);
 	}
 
 	void handleRpException(ReportPortalException rpException, String message) {
@@ -401,22 +374,17 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
-	NodeFootprint findFixtureOwner(MethodInfo fixture) {
+	@SuppressWarnings("rawtypes")
+	protected NodeFootprint<? extends NodeInfo> findFixtureOwner(SpecInfo spec, FeatureInfo feature, IterationInfo iteration,
+			MethodInfo fixture) {
 		MethodKind kind = fixture.getKind();
-		SpecInfo sourceSpec = fixture.getParent();
 		if (kind.isSpecScopedFixtureMethod()) {
-			return launchContext.findSpecFootprint(sourceSpec);
+			return launchContext.findSpecFootprint(spec);
+		} else if (!feature.isParameterized() && !feature.isReportIterations()) {
+			return launchContext.findFeatureFootprint(feature);
 		} else {
-			IterationInfo currentIteration = launchContext.getRuntimePointerForSpec(sourceSpec).getCurrentIteration();
-			return launchContext.findIterationFootprint(currentIteration);
+			return launchContext.findIterationFootprint(iteration);
 		}
-	}
-
-	private IterationInfo buildIterationMaskForFeature(FeatureInfo featureInfo) {
-		IterationInfo iterationInfo = new IterationInfo(featureInfo, NOT_PROVIDED, 0);
-		iterationInfo.setName(featureInfo.getName());
-		iterationInfo.setDescription(featureInfo.getDescription());
-		return iterationInfo;
 	}
 
 	private FinishExecutionRQ createFinishExecutionRQ() {
@@ -448,18 +416,57 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		return rq;
 	}
 
-	static ItemStatus calculateFootprintStatus(ReportableItemFootprint<?> footprint) {
-		if (footprint.getStatus().isPresent()) {
-			return footprint.getStatus().get();
-		}
-
-		// don't set status explicitly for footprints with descendants:
-		// delegate status calculation to RP
-		return footprint.hasDescendants() ? ItemStatus.WARN : ItemStatus.PASSED;
+	private StartTestItemRQ createFeatureItemRQ(FeatureInfo featureInfo) {
+		StartTestItemRQ rq = createBaseStartTestItemRQ(featureInfo.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
+		rq.setDescription(buildFeatureDescription(featureInfo));
+		Description description = featureInfo.getDescription();
+		String codeRef = description.getClassName() + "." + description.getMethodName();
+		rq.setCodeRef(codeRef);
+		Method method = featureInfo.getFeatureMethod().getReflection();
+		TestCaseId testCaseId = method.getAnnotation(TestCaseId.class);
+		rq.setTestCaseId(ofNullable(TestCaseIdUtils.getTestCaseId(testCaseId, method, codeRef, null)).map(TestCaseIdEntry::getId)
+				.orElse(null));
+		return rq;
 	}
 
-	static boolean isMonolithicParametrizedFeature(FeatureInfo feature) {
-		return feature.isParameterized() && !feature.isReportIterations();
+	private StartTestItemRQ createIterationItemRQ(IterationInfo iteration) {
+		StartTestItemRQ rq = createBaseStartTestItemRQ(iteration.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
+		rq.setDescription(buildIterationDescription(iteration));
+		FeatureInfo featureInfo = iteration.getFeature();
+		Description description = featureInfo.getDescription();
+		String codeRef = description.getClassName() + "." + description.getMethodName();
+		rq.setCodeRef(codeRef);
+		Method method = featureInfo.getFeatureMethod().getReflection();
+		TestCaseId testCaseId = method.getAnnotation(TestCaseId.class);
+		List<Object> params = ofNullable(iteration.getDataValues()).map(Arrays::asList).orElse(null);
+		rq.setTestCaseId(ofNullable(TestCaseIdUtils.getTestCaseId(testCaseId, method, codeRef, params)).map(TestCaseIdEntry::getId)
+				.orElse(null));
+		List<Object> paramList = ofNullable(params).orElse(Collections.emptyList());
+		List<String> names = iteration.getFeature().getParameterNames();
+		rq.setParameters(ParameterUtils.getParameters(codeRef,
+				IntStream.range(0, paramList.size()).mapToObj(i -> Pair.of(names.get(i), paramList.get(i))).collect(Collectors.toList())
+		));
+		return rq;
+	}
+
+	private StartTestItemRQ createNestedIterationItemRQ(IterationInfo iteration) {
+		List<Object> params = Arrays.asList(iteration.getDataValues());
+		List<String> names = iteration.getFeature().getParameterNames();
+		String name = IntStream.range(0, params.size()).mapToObj(i -> {
+			Object p = params.get(i);
+			String n;
+			try {
+				n = names.get(i);
+				n = ofNullable(n).orElse("param" + i + 1);
+			} catch (IndexOutOfBoundsException e) {
+				n = "param" + i + 1;
+			}
+			return Pair.of(n, p);
+		}).map(p -> p.getKey() + ": " + p.getValue()).collect(Collectors.joining("; ", "Parameters: ", ""));
+		StartTestItemRQ rq = createBaseStartTestItemRQ(name, ITEM_TYPES_REGISTRY.get(FEATURE));
+		rq.setHasStats(false);
+
+		return rq;
 	}
 
 	@Override
@@ -502,8 +509,8 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	@Override
 	public void featureSkipped(FeatureInfo feature) {
-		registerFeature(feature);
 		trackSkippedFeature(feature);
+		reportTestItemFinish(launchContext.findFeatureFootprint(feature));
 	}
 
 	@Override

@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
-package com.epam.reportportal.spock.testcaseid;
+package com.epam.reportportal.spock.fixtures;
 
+import com.epam.reportportal.listeners.ItemStatus;
+import com.epam.reportportal.listeners.ItemType;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.ReportPortalSpockListener;
-import com.epam.reportportal.spock.features.HelloSpockSpecUnroll;
+import com.epam.reportportal.spock.features.fixtures.SetupFixture;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
+import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,10 +43,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
 
-public class TestCaseIdParameterizedTest {
-
+public class TestSetupFixtureIntegrity {
 	private final String classId = CommonUtils.namedId("class_");
-	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(3).collect(Collectors.toList());
+	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(2).collect(Collectors.toList());
 
 	private final ReportPortalClient client = mock(ReportPortalClient.class);
 
@@ -55,19 +57,32 @@ public class TestCaseIdParameterizedTest {
 	}
 
 	@Test
-	public void verify_test_case_id_unroll_feature_generation() {
-		Result result = runClasses(HelloSpockSpecUnroll.class);
+	public void verify_setup_fixture_correct_reporting() {
+		Result result = runClasses(SetupFixture.class);
 
 		assertThat(result.getFailureCount(), equalTo(0));
 
-		verify(client).startTestItem(any());
-		ArgumentCaptor<StartTestItemRQ> captor = ArgumentCaptor.forClass(StartTestItemRQ.class);
-		verify(client, times(3)).startTestItem(same(classId), captor.capture());
+		verify(client).startLaunch(any());
+		verify(client).startTestItem(any(StartTestItemRQ.class));
+		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
+		verify(client, times(2)).startTestItem(same(classId), startCaptor.capture());
 
-		List<String> items = captor.getAllValues().stream().map(StartTestItemRQ::getTestCaseId).collect(Collectors.toList());
-		assertThat(items, hasSize(3));
+		List<StartTestItemRQ> startItems = startCaptor.getAllValues();
+		List<String> stepTypes = startItems.stream().map(StartTestItemRQ::getType).collect(Collectors.toList());
+		assertThat(stepTypes, containsInAnyOrder(ItemType.STEP.name(), ItemType.BEFORE_METHOD.name()));
 
-		String staticPart = HelloSpockSpecUnroll.class.getCanonicalName() + "." + HelloSpockSpecUnroll.TEST_NAME;
-		assertThat(items, containsInAnyOrder(staticPart + "[Spock,5]", staticPart + "[Kirk,4]", staticPart + "[Scotty,6]"));
+		ArgumentCaptor<FinishTestItemRQ> finishCaptor = ArgumentCaptor.forClass(FinishTestItemRQ.class);
+		verify(client).finishTestItem(eq(methodIds.get(0)), finishCaptor.capture());
+		verify(client).finishTestItem(eq(methodIds.get(1)), finishCaptor.capture());
+
+		List<FinishTestItemRQ> finishItems = finishCaptor.getAllValues();
+		finishItems.forEach(i-> {
+			assertThat(i.getEndTime(), notNullValue());
+			assertThat(i.getStatus(), equalTo(ItemStatus.PASSED.name()));
+			assertThat(i.getIssue(), nullValue());
+		});
+
+		verify(client).finishTestItem(eq(classId), any());
+		verifyNoMoreInteractions(client);
 	}
 }
