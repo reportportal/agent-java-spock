@@ -73,8 +73,7 @@ public class TestCleanupFixtureIntegrity {
 		assertThat(stepTypes, containsInAnyOrder(ItemType.STEP.name(), ItemType.AFTER_METHOD.name()));
 
 		ArgumentCaptor<FinishTestItemRQ> finishCaptor = ArgumentCaptor.forClass(FinishTestItemRQ.class);
-		verify(client).finishTestItem(eq(methodIds.get(0)), finishCaptor.capture());
-		verify(client).finishTestItem(eq(methodIds.get(1)), finishCaptor.capture());
+		methodIds.forEach(id -> verify(client).finishTestItem(eq(id), finishCaptor.capture()));
 
 		List<FinishTestItemRQ> finishItems = finishCaptor.getAllValues();
 		finishItems.forEach(i-> {

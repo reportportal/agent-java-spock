@@ -18,11 +18,11 @@ package com.epam.reportportal.spock.fixtures;
 
 import com.epam.reportportal.listeners.ItemStatus;
 import com.epam.reportportal.listeners.ItemType;
+import com.epam.reportportal.service.Launch;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.ReportPortalSpockListener;
-import com.epam.reportportal.spock.features.fixtures.SetupFixture;
-import com.epam.reportportal.spock.features.fixtures.SetupSpecFixture;
+import com.epam.reportportal.spock.features.fixtures.SetupSpecFixtureFailed;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
@@ -44,9 +44,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
 
-public class TestSetupSpecFixtureIntegrity {
+public class TestSetupSpecFixtureFailureIntegrity {
 	private final String classId = CommonUtils.namedId("class_");
-	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(2).collect(Collectors.toList());
+	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(3).collect(Collectors.toList());
 
 	private final ReportPortalClient client = mock(ReportPortalClient.class);
 
@@ -58,31 +58,37 @@ public class TestSetupSpecFixtureIntegrity {
 	}
 
 	@Test
-	public void verify_setup_spec_fixture_correct_reporting() {
-		Result result = runClasses(SetupSpecFixture.class);
+	public void verify_setup_spec_failure_correct_reporting() {
+		Result result = runClasses(SetupSpecFixtureFailed.class);
 
-		assertThat(result.getFailureCount(), equalTo(0));
+		assertThat(result.getFailureCount(), equalTo(1));
 
 		verify(client).startLaunch(any());
 		verify(client).startTestItem(any(StartTestItemRQ.class));
-		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
-		verify(client, times(2)).startTestItem(same(classId), startCaptor.capture());
+		ArgumentCaptor<StartTestItemRQ> startFeatureCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
+		verify(client, times(3)).startTestItem(same(classId), startFeatureCaptor.capture());
 
-		List<StartTestItemRQ> startItems = startCaptor.getAllValues();
+		List<StartTestItemRQ> startItems = startFeatureCaptor.getAllValues();
 		List<String> stepTypes = startItems.stream().map(StartTestItemRQ::getType).collect(Collectors.toList());
-		assertThat(stepTypes, containsInAnyOrder(ItemType.STEP.name(), ItemType.BEFORE_CLASS.name()));
+		assertThat(stepTypes, containsInAnyOrder(ItemType.STEP.name(), ItemType.STEP.name(), ItemType.BEFORE_CLASS.name()));
 
 		ArgumentCaptor<FinishTestItemRQ> finishCaptor = ArgumentCaptor.forClass(FinishTestItemRQ.class);
 		methodIds.forEach(id -> verify(client).finishTestItem(eq(id), finishCaptor.capture()));
 
 		List<FinishTestItemRQ> finishItems = finishCaptor.getAllValues();
-		finishItems.forEach(i-> {
-			assertThat(i.getEndTime(), notNullValue());
-			assertThat(i.getStatus(), equalTo(ItemStatus.PASSED.name()));
-			assertThat(i.getIssue(), nullValue());
-		});
+		List<String> statuses = finishItems.stream().map(FinishTestItemRQ::getStatus).collect(Collectors.toList());
+		assertThat(statuses, containsInAnyOrder(ItemStatus.FAILED.name(), ItemStatus.SKIPPED.name(), ItemStatus.SKIPPED.name()));
+		finishItems.forEach(i -> assertThat(i.getEndTime(), notNullValue()));
+		finishItems.stream()
+				.filter(i -> ItemStatus.SKIPPED.name().equals(i.getStatus()))
+				.forEach(i -> assertThat(i.getIssue(), sameInstance(Launch.NOT_ISSUE)));
 
-		verify(client).finishTestItem(eq(classId), any());
+		ArgumentCaptor<FinishTestItemRQ> finishSpecCaptor = ArgumentCaptor.forClass(FinishTestItemRQ.class);
+		verify(client).finishTestItem(eq(classId), finishSpecCaptor.capture());
+		assertThat(finishSpecCaptor.getValue().getStatus(), equalTo(ItemStatus.FAILED.name()));
+
+		//noinspection unchecked
+		verify(client).log(any(List.class));
 		verifyNoMoreInteractions(client);
 	}
 }
