@@ -80,7 +80,6 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	private ListenerParameters launchParameters;
 	private final AbstractLaunchContext launchContext;
-	private Maybe<String> registeredFeatureId = null;
 
 	public ReportPortalSpockListener() {
 		this(ReportPortal.builder().build());
@@ -153,7 +152,6 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	protected void reportFeatureStart(Maybe<String> parentId, FeatureInfo featureInfo) {
 		StartTestItemRQ rq = createFeatureItemRQ(featureInfo);
 		Maybe<String> testItemId = launch.get().startTestItem(parentId, rq);
-		registeredFeatureId = testItemId;
 		launchContext.addRunningFeature(testItemId, featureInfo);
 	}
 
@@ -258,11 +256,11 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 		ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(iteration);
 		reportIterationFinish(footprint);
-		registeredFeatureId = null;
 	}
 
+	@SuppressWarnings("rawtypes")
 	public void publishFixtureResult(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
-		NodeFootprint ownerFootprint = findFixtureOwner(spec, feature, iteration, fixture);
+		NodeFootprint<? extends NodeInfo> ownerFootprint = findFixtureOwner(spec, feature, iteration, fixture);
 		ReportableItemFootprint<MethodInfo> fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(fixture);
 		reportTestItemFinish(fixtureFootprint);
 	}
@@ -323,10 +321,16 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
-	public void trackSkippedSpec(SpecInfo spec) {
+	protected void trackSkippedSpec(SpecInfo spec) {
 		registerSpec(spec);
 		ReportableItemFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
 		specFootprint.setStatus(SKIPPED);
+	}
+
+	protected void trackSkippedFeature(FeatureInfo feature) {
+		reportFeatureStart(launchContext.findSpecFootprint(feature.getSpec()).getId(), feature);
+		NodeFootprint<FeatureInfo> footprint = launchContext.findFeatureFootprint(feature);
+		footprint.setStatus(SKIPPED);
 	}
 
 	public void finishLaunch() {
@@ -347,7 +351,6 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	protected void reportIterationStart(Maybe<String> id, StartTestItemRQ rq, IterationInfo iteration) {
 		Maybe<String> testItemId = launch.get().startTestItem(id, rq);
-		registeredFeatureId = testItemId;
 		launchContext.addRunningIteration(testItemId, iteration);
 	}
 
@@ -371,7 +374,9 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
-	NodeFootprint<? extends NodeInfo> findFixtureOwner(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
+	@SuppressWarnings("rawtypes")
+	protected NodeFootprint<? extends NodeInfo> findFixtureOwner(SpecInfo spec, FeatureInfo feature, IterationInfo iteration,
+			MethodInfo fixture) {
 		MethodKind kind = fixture.getKind();
 		if (kind.isSpecScopedFixtureMethod()) {
 			return launchContext.findSpecFootprint(spec);
@@ -504,10 +509,8 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	@Override
 	public void featureSkipped(FeatureInfo feature) {
-		registerFeature(feature);
-		NodeFootprint<FeatureInfo> footprint = launchContext.findFeatureFootprint(feature);
-		footprint.setStatus(SKIPPED);
-		reportFeatureFinish(footprint);
+		trackSkippedFeature(feature);
+		reportTestItemFinish(launchContext.findFeatureFootprint(feature));
 	}
 
 	@Override

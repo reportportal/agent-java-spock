@@ -4,6 +4,7 @@
 ### Added
 - Iterations as nested steps reporting
 - Parameters support
+- Ignore fixture functionality support
 ### Fixed
 - Iterations now fail parent feature
 - Unrolled step description
