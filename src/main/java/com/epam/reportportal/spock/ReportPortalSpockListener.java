@@ -41,6 +41,8 @@ import org.slf4j.LoggerFactory;
 import org.spockframework.runtime.AbstractRunListener;
 import org.spockframework.runtime.model.*;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.Supplier;
@@ -232,14 +234,9 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		footprint.markAsPublished();
 	}
 
-	public void publishIterationResult(IterationInfo iteration) {
-		FeatureInfo feature = iteration.getFeature();
-		if (!feature.isReportIterations() && !feature.isParameterized()) {
-			return;
-		}
-		ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(iteration);
-		reportIterationFinish(footprint);
-		registeredFeatureId = null;
+	public void publishSpecResult(SpecInfo spec) {
+		ReportableItemFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
+		reportTestItemFinish(specFootprint);
 	}
 
 	public void publishFeatureResult(FeatureInfo feature) {
@@ -254,29 +251,48 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
+	public void publishIterationResult(IterationInfo iteration) {
+		FeatureInfo feature = iteration.getFeature();
+		if (!feature.isReportIterations() && !feature.isParameterized()) {
+			return;
+		}
+		ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(iteration);
+		reportIterationFinish(footprint);
+		registeredFeatureId = null;
+	}
+
 	public void publishFixtureResult(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
 		NodeFootprint ownerFootprint = findFixtureOwner(spec, feature, iteration, fixture);
 		ReportableItemFootprint<MethodInfo> fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(fixture);
 		reportTestItemFinish(fixtureFootprint);
 	}
 
-	public void publishSpecResult(SpecInfo spec) {
-		ReportableItemFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
-		reportTestItemFinish(specFootprint);
-	}
-
-	public void reportFixtureError(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, ErrorInfo error) {
+	public void reportFixtureError(@Nonnull SpecInfo spec, @Nullable FeatureInfo feature, @Nullable IterationInfo iteration,
+			@Nonnull ErrorInfo error) {
 		MethodInfo method = error.getMethod();
-		NodeFootprint ownerFootprint = findFixtureOwner(spec, feature, iteration, error.getMethod());
+		NodeFootprint<?> ownerFootprint = findFixtureOwner(spec, feature, iteration, error.getMethod());
 		MethodKind kind = method.getKind();
+		NodeFootprint<?> specFootprint = launchContext.findSpecFootprint(spec);
+		specFootprint.setStatus(FAILED);
 		if (!kind.isCleanupMethod()) {
-			NodeFootprint<?> footprint;
-			if (feature.isParameterized() || feature.isReportIterations()) {
-				footprint = launchContext.findIterationFootprint(iteration);
+			if (feature != null) {
+				// Failed before / after feature
+				NodeFootprint<?> footprint;
+				if (feature.isParameterized() || feature.isReportIterations()) {
+					footprint = launchContext.findIterationFootprint(iteration);
+				} else {
+					footprint = launchContext.findFeatureFootprint(feature);
+				}
+				footprint.setStatus(SKIPPED);
 			} else {
-				footprint = launchContext.findFeatureFootprint(feature);
+				// Failed before spec
+				spec.getFeatures().forEach(f -> {
+					reportFeatureStart(specFootprint.getId(), f);
+					NodeFootprint<FeatureInfo> ff = launchContext.findFeatureFootprint(f);
+					ff.setStatus(SKIPPED);
+					reportFeatureFinish(ff);
+				});
 			}
-			footprint.setStatus(SKIPPED);
 		}
 		ReportableItemFootprint<MethodInfo> fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(method);
 		fixtureFootprint.setStatus(FAILED);
@@ -305,19 +321,6 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 			ofNullable(launchContext.findSpecFootprint(error.getMethod().getFeature().getSpec())).ifPresent(s -> s.setStatus(FAILED));
 			logError(error);
 		}
-	}
-
-	public void trackSkippedFeature(FeatureInfo featureInfo) {
-		IterationInfo maskedIteration = buildIterationMaskForFeature(featureInfo);
-		reportIterationStart(launchContext.findSpecFootprint(featureInfo.getSpec()).getId(),
-				createIterationItemRQ(maskedIteration),
-				maskedIteration
-		);
-		// set skipped status in an appropriate footprint
-		ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(maskedIteration);
-		footprint.setStatus(SKIPPED);
-		// report result of masked iteration
-		reportTestItemFinish(footprint);
 	}
 
 	public void trackSkippedSpec(SpecInfo spec) {
@@ -370,20 +373,13 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	NodeFootprint<? extends NodeInfo> findFixtureOwner(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
 		MethodKind kind = fixture.getKind();
-		if(kind.isSpecScopedFixtureMethod()) {
+		if (kind.isSpecScopedFixtureMethod()) {
 			return launchContext.findSpecFootprint(spec);
-		}else if (!feature.isParameterized() && !feature.isReportIterations()) {
+		} else if (!feature.isParameterized() && !feature.isReportIterations()) {
 			return launchContext.findFeatureFootprint(feature);
 		} else {
 			return launchContext.findIterationFootprint(iteration);
 		}
-	}
-
-	private IterationInfo buildIterationMaskForFeature(FeatureInfo featureInfo) {
-		IterationInfo iterationInfo = new IterationInfo(featureInfo, null, 0);
-		iterationInfo.setName(featureInfo.getName());
-		iterationInfo.setDescription(featureInfo.getDescription());
-		return iterationInfo;
 	}
 
 	private FinishExecutionRQ createFinishExecutionRQ() {
@@ -509,7 +505,9 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	@Override
 	public void featureSkipped(FeatureInfo feature) {
 		registerFeature(feature);
-		trackSkippedFeature(feature);
+		NodeFootprint<FeatureInfo> footprint = launchContext.findFeatureFootprint(feature);
+		footprint.setStatus(SKIPPED);
+		reportFeatureFinish(footprint);
 	}
 
 	@Override
