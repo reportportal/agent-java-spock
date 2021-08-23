@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [5.1.0-RC-1]
 ### Added
 - Iterations as nested steps reporting
 - Parameters support
