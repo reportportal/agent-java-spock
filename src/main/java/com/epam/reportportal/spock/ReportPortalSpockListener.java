@@ -16,19 +16,18 @@
 package com.epam.reportportal.spock;
 
 import com.epam.reportportal.annotations.TestCaseId;
+import com.epam.reportportal.annotations.attribute.Attributes;
 import com.epam.reportportal.exception.ReportPortalException;
 import com.epam.reportportal.listeners.ItemStatus;
 import com.epam.reportportal.listeners.ListenerParameters;
 import com.epam.reportportal.service.Launch;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.item.TestCaseIdEntry;
-import com.epam.reportportal.utils.MemoizingSupplier;
-import com.epam.reportportal.utils.ParameterUtils;
-import com.epam.reportportal.utils.StatusEvaluation;
-import com.epam.reportportal.utils.TestCaseIdUtils;
+import com.epam.reportportal.utils.*;
 import com.epam.ta.reportportal.ws.model.FinishExecutionRQ;
 import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
+import com.epam.ta.reportportal.ws.model.attribute.ItemAttributesRQ;
 import com.epam.ta.reportportal.ws.model.launch.StartLaunchRQ;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -127,6 +126,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		StartTestItemRQ rq = createBaseStartTestItemRQ(spec.getName(), ITEM_TYPES_REGISTRY.get(SPEC_EXECUTION));
 		rq.setDescription(spec.getNarrative());
 		rq.setCodeRef(spec.getDescription().getClassName());
+		setSpecAttributes(rq, spec);
 		Maybe<String> testItemId = this.launch.get().startTestItem(rq);
 		launchContext.addRunningSpec(testItemId, spec);
 	}
@@ -407,7 +407,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		return startLaunchRQ;
 	}
 
-	private StartTestItemRQ createBaseStartTestItemRQ(String name, String type) {
+	protected StartTestItemRQ createBaseStartTestItemRQ(String name, String type) {
 		StartTestItemRQ rq = new StartTestItemRQ();
 		rq.setName(name);
 		rq.setStartTime(Calendar.getInstance().getTime());
@@ -416,7 +416,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		return rq;
 	}
 
-	private StartTestItemRQ createFeatureItemRQ(FeatureInfo featureInfo) {
+	protected StartTestItemRQ createFeatureItemRQ(FeatureInfo featureInfo) {
 		StartTestItemRQ rq = createBaseStartTestItemRQ(featureInfo.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
 		rq.setDescription(buildFeatureDescription(featureInfo));
 		Description description = featureInfo.getDescription();
@@ -426,7 +426,24 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		TestCaseId testCaseId = method.getAnnotation(TestCaseId.class);
 		rq.setTestCaseId(ofNullable(TestCaseIdUtils.getTestCaseId(testCaseId, method, codeRef, null)).map(TestCaseIdEntry::getId)
 				.orElse(null));
+		setFeatureAttributes(rq, featureInfo);
 		return rq;
+	}
+
+	protected void setSpecAttributes(StartTestItemRQ rq, SpecInfo spec) {
+		Attributes attributes = spec.getAnnotation(Attributes.class);
+		if (attributes != null) {
+			Set<ItemAttributesRQ> itemAttributes = AttributeParser.retrieveAttributes(attributes);
+			rq.setAttributes(itemAttributes);
+		}
+	}
+
+	protected void setFeatureAttributes(StartTestItemRQ rq, FeatureInfo featureInfo) {
+		Attributes attributes = featureInfo.getFeatureMethod().getAnnotation(Attributes.class);
+		if (attributes != null) {
+			Set<ItemAttributesRQ> itemAttributes = AttributeParser.retrieveAttributes(attributes);
+			rq.setAttributes(itemAttributes);
+		}
 	}
 
 	private StartTestItemRQ createIterationItemRQ(IterationInfo iteration) {
