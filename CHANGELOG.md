@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- `Attributes` annotation handling for Specs and Fixtures
 
 ## [5.1.0-RC-1]
 ### Added

@@ -16,19 +16,18 @@
 package com.epam.reportportal.spock;
 
 import com.epam.reportportal.annotations.TestCaseId;
+import com.epam.reportportal.annotations.attribute.Attributes;
 import com.epam.reportportal.exception.ReportPortalException;
 import com.epam.reportportal.listeners.ItemStatus;
 import com.epam.reportportal.listeners.ListenerParameters;
 import com.epam.reportportal.service.Launch;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.item.TestCaseIdEntry;
-import com.epam.reportportal.utils.MemoizingSupplier;
-import com.epam.reportportal.utils.ParameterUtils;
-import com.epam.reportportal.utils.StatusEvaluation;
-import com.epam.reportportal.utils.TestCaseIdUtils;
+import com.epam.reportportal.utils.*;
 import com.epam.ta.reportportal.ws.model.FinishExecutionRQ;
 import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
+import com.epam.ta.reportportal.ws.model.attribute.ItemAttributesRQ;
 import com.epam.ta.reportportal.ws.model.launch.StartLaunchRQ;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -43,6 +42,7 @@ import org.spockframework.runtime.model.*;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.Supplier;
@@ -119,31 +119,57 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
+	protected void setAttributes(StartTestItemRQ rq, AnnotatedElement methodOrClass) {
+		Attributes attributes = methodOrClass.getAnnotation(Attributes.class);
+		if (attributes != null) {
+			Set<ItemAttributesRQ> itemAttributes = AttributeParser.retrieveAttributes(attributes);
+			rq.setAttributes(itemAttributes);
+		}
+	}
+
+	protected void setSpecAttributes(StartTestItemRQ rq, SpecInfo spec) {
+		setAttributes(rq, spec.getReflection());
+	}
+
+	@Nonnull
+	protected StartTestItemRQ createSpecItemRQ(@Nonnull SpecInfo spec) {
+		StartTestItemRQ rq = createBaseStartTestItemRQ(spec.getName(), ITEM_TYPES_REGISTRY.get(SPEC_EXECUTION));
+		rq.setDescription(spec.getNarrative());
+		rq.setCodeRef(spec.getDescription().getClassName());
+		setSpecAttributes(rq, spec);
+		return rq;
+	}
+
 	public void registerSpec(SpecInfo spec) {
 		if (launchContext.isSpecRegistered(spec)) {
 			return;
 		}
-
-		StartTestItemRQ rq = createBaseStartTestItemRQ(spec.getName(), ITEM_TYPES_REGISTRY.get(SPEC_EXECUTION));
-		rq.setDescription(spec.getNarrative());
-		rq.setCodeRef(spec.getDescription().getClassName());
-		Maybe<String> testItemId = this.launch.get().startTestItem(rq);
+		Maybe<String> testItemId = this.launch.get().startTestItem(createSpecItemRQ(spec));
 		launchContext.addRunningSpec(testItemId, spec);
+	}
+
+	@Nonnull
+	protected StartTestItemRQ createFixtureItemRQ(@Nonnull FeatureInfo feature, @Nonnull MethodInfo fixture, boolean inherited) {
+		MethodKind kind = fixture.getKind();
+		String fixtureDisplayName = getFixtureDisplayName(fixture, inherited);
+		StartTestItemRQ rq = createBaseStartTestItemRQ(fixtureDisplayName, ITEM_TYPES_REGISTRY.get(kind));
+		if (kind.isFeatureScopedFixtureMethod() && !feature.isReportIterations() && feature.isParameterized()) {
+			rq.setHasStats(false);
+		}
+		return rq;
+	}
+
+	@Nonnull
+	protected Maybe<String> startFixture(@Nonnull Maybe<String> parentId, @Nonnull StartTestItemRQ rq) {
+		return launch.get().startTestItem(parentId, rq);
 	}
 
 	public void registerFixture(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
 		NodeFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
-		boolean isFixtureInherited = !fixture.getParent().equals(specFootprint.getItem());
-		String fixtureDisplayName = getFixtureDisplayName(fixture, isFixtureInherited);
-		MethodKind kind = fixture.getKind();
-		StartTestItemRQ rq = createBaseStartTestItemRQ(fixtureDisplayName, ITEM_TYPES_REGISTRY.get(kind));
-		Maybe<String> testItemId;
-		if (kind.isFeatureScopedFixtureMethod() && !feature.isReportIterations() && feature.isParameterized()) {
-			rq.setHasStats(false);
-			testItemId = launch.get().startTestItem(launchContext.findFeatureFootprint(feature).getId(), rq);
-		} else {
-			testItemId = launch.get().startTestItem(specFootprint.getId(), rq);
-		}
+		StartTestItemRQ rq = createFixtureItemRQ(feature, fixture, !fixture.getParent().equals(specFootprint.getItem()));
+		Maybe<String> testItemId = startFixture(rq.isHasStats() ?
+				specFootprint.getId() :
+				launchContext.findFeatureFootprint(feature).getId(), rq);
 		@SuppressWarnings("rawtypes")
 		NodeFootprint<? extends NodeInfo> fixtureOwnerFootprint = findFixtureOwner(spec, feature, iteration, fixture);
 		fixtureOwnerFootprint.addFixtureFootprint(new FixtureFootprint(fixture, testItemId));
@@ -407,7 +433,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		return startLaunchRQ;
 	}
 
-	private StartTestItemRQ createBaseStartTestItemRQ(String name, String type) {
+	protected StartTestItemRQ createBaseStartTestItemRQ(String name, String type) {
 		StartTestItemRQ rq = new StartTestItemRQ();
 		rq.setName(name);
 		rq.setStartTime(Calendar.getInstance().getTime());
@@ -416,7 +442,11 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		return rq;
 	}
 
-	private StartTestItemRQ createFeatureItemRQ(FeatureInfo featureInfo) {
+	protected void setFeatureAttributes(@Nonnull StartTestItemRQ rq, @Nonnull FeatureInfo featureInfo) {
+		setAttributes(rq, featureInfo.getFeatureMethod().getReflection());
+	}
+
+	protected StartTestItemRQ createFeatureItemRQ(FeatureInfo featureInfo) {
 		StartTestItemRQ rq = createBaseStartTestItemRQ(featureInfo.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
 		rq.setDescription(buildFeatureDescription(featureInfo));
 		Description description = featureInfo.getDescription();
@@ -426,6 +456,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		TestCaseId testCaseId = method.getAnnotation(TestCaseId.class);
 		rq.setTestCaseId(ofNullable(TestCaseIdUtils.getTestCaseId(testCaseId, method, codeRef, null)).map(TestCaseIdEntry::getId)
 				.orElse(null));
+		setFeatureAttributes(rq, featureInfo);
 		return rq;
 	}
 
