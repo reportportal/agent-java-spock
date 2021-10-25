@@ -407,7 +407,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		return startLaunchRQ;
 	}
 
-	private StartTestItemRQ createBaseStartTestItemRQ(String name, String type) {
+	protected StartTestItemRQ createBaseStartTestItemRQ(String name, String type) {
 		StartTestItemRQ rq = new StartTestItemRQ();
 		rq.setName(name);
 		rq.setStartTime(Calendar.getInstance().getTime());
@@ -416,7 +416,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		return rq;
 	}
 
-	private StartTestItemRQ createFeatureItemRQ(FeatureInfo featureInfo) {
+	protected StartTestItemRQ createFeatureItemRQ(FeatureInfo featureInfo) {
 		StartTestItemRQ rq = createBaseStartTestItemRQ(featureInfo.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
 		rq.setDescription(buildFeatureDescription(featureInfo));
 		Description description = featureInfo.getDescription();
@@ -430,7 +430,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		return rq;
 	}
 
-	private void setSpecAttributes(StartTestItemRQ rq, SpecInfo spec) {
+	protected void setSpecAttributes(StartTestItemRQ rq, SpecInfo spec) {
 		Attributes attributes = spec.getAnnotation(Attributes.class);
 		if (attributes != null) {
 			Set<ItemAttributesRQ> itemAttributes = AttributeParser.retrieveAttributes(attributes);
@@ -438,7 +438,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
-	private void setFeatureAttributes(StartTestItemRQ rq, FeatureInfo featureInfo) {
+	protected void setFeatureAttributes(StartTestItemRQ rq, FeatureInfo featureInfo) {
 		Attributes attributes = featureInfo.getFeatureMethod().getAnnotation(Attributes.class);
 		if (attributes != null) {
 			Set<ItemAttributesRQ> itemAttributes = AttributeParser.retrieveAttributes(attributes);
