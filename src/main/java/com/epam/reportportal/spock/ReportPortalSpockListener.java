@@ -134,7 +134,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		launchContext.addRunningSpec(testItemId, spec);
 	}
 
-	public void interceptFixtureMethods(SpecInfo spec) {
+	protected void interceptFixtureMethods(SpecInfo spec) {
 		for (MethodInfo fixture : spec.getAllFixtureMethods()) {
 			fixture.addInterceptor(new FixtureInterceptor(this));
 		}
@@ -444,8 +444,9 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	private void setSpecAttributes(StartTestItemRQ rq, SpecInfo spec, Set<ItemAttributesRQ> attributesRQS) {
 
-		if (attributesRQS != null)
-			rq.setAttributes(attributesRQS);
+		if (attributesRQS != null) {
+            rq.setAttributes(attributesRQS);
+        }
 
 		Attribute attribute = spec.getAnnotation(Attribute.class);
 		if (attribute != null) {
@@ -463,8 +464,9 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	private void setFeatureAttributes(StartTestItemRQ rq, FeatureInfo featureInfo, Set<ItemAttributesRQ> attributesRQS) {
 
-		if (attributesRQS != null)
-			rq.setAttributes(attributesRQS);
+		if (attributesRQS != null) {
+            rq.setAttributes(attributesRQS);
+        }
 
 		Attribute attribute = featureInfo.getFeatureMethod().getAnnotation(Attribute.class);
 		if (attribute != null) {
