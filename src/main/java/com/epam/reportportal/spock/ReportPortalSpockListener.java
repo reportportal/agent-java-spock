@@ -42,6 +42,7 @@ import org.spockframework.runtime.model.*;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.Supplier;
@@ -118,32 +119,57 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
-	public void registerSpec(SpecInfo spec) {
-		if (launchContext.isSpecRegistered(spec)) {
-			return;
+	protected void setAttributes(StartTestItemRQ rq, AnnotatedElement methodOrClass) {
+		Attributes attributes = methodOrClass.getAnnotation(Attributes.class);
+		if (attributes != null) {
+			Set<ItemAttributesRQ> itemAttributes = AttributeParser.retrieveAttributes(attributes);
+			rq.setAttributes(itemAttributes);
 		}
+	}
 
+	protected void setSpecAttributes(StartTestItemRQ rq, SpecInfo spec) {
+		setAttributes(rq, spec.getReflection());
+	}
+
+	@Nonnull
+	protected StartTestItemRQ createSpecItemRQ(@Nonnull SpecInfo spec) {
 		StartTestItemRQ rq = createBaseStartTestItemRQ(spec.getName(), ITEM_TYPES_REGISTRY.get(SPEC_EXECUTION));
 		rq.setDescription(spec.getNarrative());
 		rq.setCodeRef(spec.getDescription().getClassName());
 		setSpecAttributes(rq, spec);
-		Maybe<String> testItemId = this.launch.get().startTestItem(rq);
+		return rq;
+	}
+
+	public void registerSpec(SpecInfo spec) {
+		if (launchContext.isSpecRegistered(spec)) {
+			return;
+		}
+		Maybe<String> testItemId = this.launch.get().startTestItem(createSpecItemRQ(spec));
 		launchContext.addRunningSpec(testItemId, spec);
+	}
+
+	@Nonnull
+	protected StartTestItemRQ createFixtureItemRQ(@Nonnull FeatureInfo feature, @Nonnull MethodInfo fixture, boolean inherited) {
+		MethodKind kind = fixture.getKind();
+		String fixtureDisplayName = getFixtureDisplayName(fixture, inherited);
+		StartTestItemRQ rq = createBaseStartTestItemRQ(fixtureDisplayName, ITEM_TYPES_REGISTRY.get(kind));
+		if (kind.isFeatureScopedFixtureMethod() && !feature.isReportIterations() && feature.isParameterized()) {
+			rq.setHasStats(false);
+		}
+		return rq;
+	}
+
+	@Nonnull
+	protected Maybe<String> startFixture(@Nonnull Maybe<String> parentId, @Nonnull StartTestItemRQ rq) {
+		return launch.get().startTestItem(parentId, rq);
 	}
 
 	public void registerFixture(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
 		NodeFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
-		boolean isFixtureInherited = !fixture.getParent().equals(specFootprint.getItem());
-		String fixtureDisplayName = getFixtureDisplayName(fixture, isFixtureInherited);
-		MethodKind kind = fixture.getKind();
-		StartTestItemRQ rq = createBaseStartTestItemRQ(fixtureDisplayName, ITEM_TYPES_REGISTRY.get(kind));
-		Maybe<String> testItemId;
-		if (kind.isFeatureScopedFixtureMethod() && !feature.isReportIterations() && feature.isParameterized()) {
-			rq.setHasStats(false);
-			testItemId = launch.get().startTestItem(launchContext.findFeatureFootprint(feature).getId(), rq);
-		} else {
-			testItemId = launch.get().startTestItem(specFootprint.getId(), rq);
-		}
+		StartTestItemRQ rq = createFixtureItemRQ(feature, fixture, !fixture.getParent().equals(specFootprint.getItem()));
+		Maybe<String> testItemId = startFixture(rq.isHasStats() ?
+				specFootprint.getId() :
+				launchContext.findFeatureFootprint(feature).getId(), rq);
 		@SuppressWarnings("rawtypes")
 		NodeFootprint<? extends NodeInfo> fixtureOwnerFootprint = findFixtureOwner(spec, feature, iteration, fixture);
 		fixtureOwnerFootprint.addFixtureFootprint(new FixtureFootprint(fixture, testItemId));
@@ -416,6 +442,10 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		return rq;
 	}
 
+	protected void setFeatureAttributes(@Nonnull StartTestItemRQ rq, @Nonnull FeatureInfo featureInfo) {
+		setAttributes(rq, featureInfo.getFeatureMethod().getReflection());
+	}
+
 	protected StartTestItemRQ createFeatureItemRQ(FeatureInfo featureInfo) {
 		StartTestItemRQ rq = createBaseStartTestItemRQ(featureInfo.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
 		rq.setDescription(buildFeatureDescription(featureInfo));
@@ -428,22 +458,6 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 				.orElse(null));
 		setFeatureAttributes(rq, featureInfo);
 		return rq;
-	}
-
-	protected void setSpecAttributes(StartTestItemRQ rq, SpecInfo spec) {
-		Attributes attributes = spec.getAnnotation(Attributes.class);
-		if (attributes != null) {
-			Set<ItemAttributesRQ> itemAttributes = AttributeParser.retrieveAttributes(attributes);
-			rq.setAttributes(itemAttributes);
-		}
-	}
-
-	protected void setFeatureAttributes(StartTestItemRQ rq, FeatureInfo featureInfo) {
-		Attributes attributes = featureInfo.getFeatureMethod().getAnnotation(Attributes.class);
-		if (attributes != null) {
-			Set<ItemAttributesRQ> itemAttributes = AttributeParser.retrieveAttributes(attributes);
-			rq.setAttributes(itemAttributes);
-		}
 	}
 
 	private StartTestItemRQ createIterationItemRQ(IterationInfo iteration) {
