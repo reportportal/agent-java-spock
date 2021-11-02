@@ -1,6 +1,12 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- Feature / Specification / Iteration / Fixture start methods which are overridable
+- JSR-305 annotations
+- `buildFinishTestItemRq` overridable method
+### Changed
+- Client version updated on [5.1.0-RC-12](https://github.com/reportportal/client-java/releases/tag/5.1.0-RC-12)
 ### Fixed
 - [Issue #26](https://github.com/reportportal/agent-java-spock/issues/26): NullPointerException when data value has null value
 
