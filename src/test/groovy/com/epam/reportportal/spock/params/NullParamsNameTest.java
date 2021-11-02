@@ -66,7 +66,7 @@ public class NullParamsNameTest {
 		assertThat(result.getFailureCount(), equalTo(0));
 
 		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
-		verify(client, times(2)).startTestItem(same(methodId), startCaptor.capture());
+		verify(client, timeout(2000).times(2)).startTestItem(same(methodId), startCaptor.capture());
 
 		List<StartTestItemRQ> items = startCaptor.getAllValues();
 
