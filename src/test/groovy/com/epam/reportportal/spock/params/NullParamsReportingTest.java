@@ -19,7 +19,7 @@ package com.epam.reportportal.spock.params;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.ReportPortalSpockListener;
-import com.epam.reportportal.spock.features.HelloSpockSpecUnroll;
+import com.epam.reportportal.spock.features.params.NullParamSpecUnroll;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
@@ -42,10 +42,10 @@ import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
 
-public class ParamsReportingTest {
+public class NullParamsReportingTest {
 
 	private final String classId = CommonUtils.namedId("class_");
-	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(3).collect(Collectors.toList());
+	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(2).collect(Collectors.toList());
 
 	private final ReportPortalClient client = mock(ReportPortalClient.class);
 
@@ -57,12 +57,12 @@ public class ParamsReportingTest {
 	}
 
 	@Test
-	public void verify_parameters_reporting() {
-		Result result = runClasses(HelloSpockSpecUnroll.class);
+	public void verify_null_parameter_reporting() {
+		Result result = runClasses(NullParamSpecUnroll.class);
 		assertThat(result.getFailureCount(), equalTo(0));
 
 		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
-		verify(client, times(3)).startTestItem(same(classId), startCaptor.capture());
+		verify(client, timeout(2000).times(2)).startTestItem(same(classId), startCaptor.capture());
 
 		List<StartTestItemRQ> items = startCaptor.getAllValues();
 
@@ -71,8 +71,8 @@ public class ParamsReportingTest {
 			Map<String, String> params = i.getParameters()
 					.stream()
 					.collect(Collectors.toMap(ParameterResource::getKey, ParameterResource::getValue));
-			assertThat(params, hasEntry(equalTo("name"), Matchers.any(String.class)));
-			assertThat(params, hasEntry(equalTo("length"), matchesRegex("[1-9]")));
+			assertThat(params, hasEntry(equalTo("param"), Matchers.any(String.class)));
+			assertThat(params, hasEntry(equalTo("value"), Matchers.any(String.class)));
 		});
 	}
 }

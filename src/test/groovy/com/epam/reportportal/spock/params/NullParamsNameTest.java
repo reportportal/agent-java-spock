@@ -19,60 +19,57 @@ package com.epam.reportportal.spock.params;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.ReportPortalSpockListener;
-import com.epam.reportportal.spock.features.HelloSpockSpecUnroll;
+import com.epam.reportportal.spock.features.params.NullParamSpec;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
-import com.epam.ta.reportportal.ws.model.ParameterResource;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
-import org.hamcrest.Matchers;
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.Result;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.epam.reportportal.spock.utils.TestUtils.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
 
-public class ParamsReportingTest {
+public class NullParamsNameTest {
 
 	private final String classId = CommonUtils.namedId("class_");
-	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(3).collect(Collectors.toList());
+	private final String methodId = CommonUtils.namedId("method_");
+	private final List<String> nestedSteps = Stream.generate(() -> CommonUtils.namedId("method_")).limit(3).collect(Collectors.toList());
+	private final List<Pair<String, String>> nestedStepsLink = nestedSteps.stream()
+			.map(s -> Pair.of(methodId, s))
+			.collect(Collectors.toList());
 
 	private final ReportPortalClient client = mock(ReportPortalClient.class);
 
 	@BeforeEach
 	public void setupMock() {
-		TestUtils.mockLaunch(client, null, classId, methodIds);
+		TestUtils.mockLaunch(client, null, classId, methodId);
+		TestUtils.mockNestedSteps(client, nestedStepsLink);
 		TestUtils.mockBatchLogging(client);
 		TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(client, standardParameters(), testExecutor()));
 	}
 
 	@Test
-	public void verify_parameters_reporting() {
-		Result result = runClasses(HelloSpockSpecUnroll.class);
+	public void verify_null_parameter_step_name() {
+		Result result = runClasses(NullParamSpec.class);
 		assertThat(result.getFailureCount(), equalTo(0));
 
 		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
-		verify(client, times(3)).startTestItem(same(classId), startCaptor.capture());
+		verify(client, timeout(2000).times(2)).startTestItem(same(methodId), startCaptor.capture());
 
 		List<StartTestItemRQ> items = startCaptor.getAllValues();
 
-		items.forEach(i -> {
-			assertThat(i.getParameters(), hasSize(2));
-			Map<String, String> params = i.getParameters()
-					.stream()
-					.collect(Collectors.toMap(ParameterResource::getKey, ParameterResource::getValue));
-			assertThat(params, hasEntry(equalTo("name"), Matchers.any(String.class)));
-			assertThat(params, hasEntry(equalTo("length"), matchesRegex("[1-9]")));
-		});
+		items.forEach(i -> assertThat(i.getName(), notNullValue()));
 	}
 }

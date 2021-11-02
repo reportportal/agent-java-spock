@@ -53,7 +53,6 @@ import java.util.stream.StreamSupport;
 import static com.epam.reportportal.listeners.ItemStatus.*;
 import static com.epam.reportportal.spock.NodeInfoUtils.*;
 import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISHED;
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Optional.ofNullable;
 import static org.spockframework.runtime.model.MethodKind.*;
@@ -81,45 +80,60 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	private ListenerParameters launchParameters;
 	private final AbstractLaunchContext launchContext;
 
-	public ReportPortalSpockListener() {
-		this(ReportPortal.builder().build());
+	@Nonnull
+	protected StartLaunchRQ buildStartLaunchRq(ListenerParameters parameters) {
+		StartLaunchRQ startLaunchRQ = new StartLaunchRQ();
+		startLaunchRQ.setName(parameters.getLaunchName());
+		if (!isNullOrEmpty(parameters.getDescription())) {
+			startLaunchRQ.setDescription(parameters.getDescription());
+		}
+		startLaunchRQ.setStartTime(Calendar.getInstance().getTime());
+		if (!parameters.getAttributes().isEmpty()) {
+			startLaunchRQ.setAttributes(parameters.getAttributes());
+		}
+		startLaunchRQ.setMode(parameters.getLaunchRunningMode());
+		return startLaunchRQ;
 	}
 
 	public ReportPortalSpockListener(final ReportPortal reportPortal) {
 		launchContext = new LaunchContextImpl();
+		launchParameters = reportPortal.getParameters();
 		this.launch = new MemoizingSupplier<>(() -> {
-			launchParameters = reportPortal.getParameters();
-			StartLaunchRQ rq = createStartLaunchRQ();
-
-			rq.setStartTime(Calendar.getInstance().getTime());
+			StartLaunchRQ rq = buildStartLaunchRq(launchParameters);
 			return reportPortal.newLaunch(rq);
 		});
 	}
 
-	public ReportPortalSpockListener(Supplier<Launch> launch) {
-		checkArgument(launch != null, "launch shouldn't be null");
-		launchContext = new LaunchContextImpl();
-		this.launch = new MemoizingSupplier<>(launch);
+	public ReportPortalSpockListener() {
+		this(ReportPortal.builder().build());
 	}
 
-	public ReportPortalSpockListener(Supplier<Launch> launch, AbstractLaunchContext launchContext) {
-		checkArgument(launch != null, "launch shouldn't be null");
+	public ReportPortalSpockListener(@Nonnull Supplier<Launch> launch, AbstractLaunchContext launchContext) {
 		this.launchContext = launchContext;
 		this.launch = new MemoizingSupplier<>(launch);
 	}
 
-	public void startLaunch() {
+	public ReportPortalSpockListener(@Nonnull Supplier<Launch> launch) {
+		this(launch, new LaunchContextImpl());
+	}
+
+	public Maybe<String> startLaunch() {
 		if (launchContext.tryStartLaunch()) {
 			try {
 				Maybe<String> launchId = this.launch.get().start();
 				launchContext.setLaunchId(launchId);
+				return launchId;
 			} catch (ReportPortalException ex) {
-				handleRpException(ex, "Unable start the launch: '" + launchParameters.getLaunchName() + "'");
+				handleRpException(ex,
+						"Unable start the launch: '" + ofNullable(launchParameters).map(ListenerParameters::getLaunchName)
+								.orElse("Unknown Launch") + "'"
+				);
 			}
 		}
+		return launchContext.getLaunchId();
 	}
 
-	protected void setAttributes(StartTestItemRQ rq, AnnotatedElement methodOrClass) {
+	protected void setAttributes(@Nonnull StartTestItemRQ rq, @Nonnull AnnotatedElement methodOrClass) {
 		Attributes attributes = methodOrClass.getAnnotation(Attributes.class);
 		if (attributes != null) {
 			Set<ItemAttributesRQ> itemAttributes = AttributeParser.retrieveAttributes(attributes);
@@ -127,32 +141,46 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
-	protected void setSpecAttributes(StartTestItemRQ rq, SpecInfo spec) {
+	@Nonnull
+	protected StartTestItemRQ buildBaseStartTestItemRq(@Nonnull String name, @Nonnull String type) {
+		StartTestItemRQ rq = new StartTestItemRQ();
+		rq.setName(name);
+		rq.setStartTime(Calendar.getInstance().getTime());
+		rq.setType(type);
+		rq.setLaunchUuid(launchContext.getLaunchId().blockingGet());
+		return rq;
+	}
+
+	protected void setSpecAttributes(@Nonnull StartTestItemRQ rq, @Nonnull SpecInfo spec) {
 		setAttributes(rq, spec.getReflection());
 	}
 
 	@Nonnull
-	protected StartTestItemRQ createSpecItemRQ(@Nonnull SpecInfo spec) {
-		StartTestItemRQ rq = createBaseStartTestItemRQ(spec.getName(), ITEM_TYPES_REGISTRY.get(SPEC_EXECUTION));
+	protected StartTestItemRQ buildSpecItemRq(@Nonnull SpecInfo spec) {
+		StartTestItemRQ rq = buildBaseStartTestItemRq(spec.getName(), ITEM_TYPES_REGISTRY.get(SPEC_EXECUTION));
 		rq.setDescription(spec.getNarrative());
 		rq.setCodeRef(spec.getDescription().getClassName());
 		setSpecAttributes(rq, spec);
 		return rq;
 	}
 
-	public void registerSpec(SpecInfo spec) {
+	protected Maybe<String> startSpec(@Nonnull StartTestItemRQ rq) {
+		return launch.get().startTestItem(rq);
+	}
+
+	public void registerSpec(@Nonnull SpecInfo spec) {
 		if (launchContext.isSpecRegistered(spec)) {
 			return;
 		}
-		Maybe<String> testItemId = this.launch.get().startTestItem(createSpecItemRQ(spec));
+		Maybe<String> testItemId = startSpec(buildSpecItemRq(spec));
 		launchContext.addRunningSpec(testItemId, spec);
 	}
 
 	@Nonnull
-	protected StartTestItemRQ createFixtureItemRQ(@Nonnull FeatureInfo feature, @Nonnull MethodInfo fixture, boolean inherited) {
+	protected StartTestItemRQ buildFixtureItemRq(@Nonnull FeatureInfo feature, @Nonnull MethodInfo fixture, boolean inherited) {
 		MethodKind kind = fixture.getKind();
 		String fixtureDisplayName = getFixtureDisplayName(fixture, inherited);
-		StartTestItemRQ rq = createBaseStartTestItemRQ(fixtureDisplayName, ITEM_TYPES_REGISTRY.get(kind));
+		StartTestItemRQ rq = buildBaseStartTestItemRq(fixtureDisplayName, ITEM_TYPES_REGISTRY.get(kind));
 		if (kind.isFeatureScopedFixtureMethod() && !feature.isReportIterations() && feature.isParameterized()) {
 			rq.setHasStats(false);
 		}
@@ -164,9 +192,9 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		return launch.get().startTestItem(parentId, rq);
 	}
 
-	public void registerFixture(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
+	public void registerFixture(SpecInfo spec, @Nonnull FeatureInfo feature, IterationInfo iteration, @Nonnull MethodInfo fixture) {
 		NodeFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
-		StartTestItemRQ rq = createFixtureItemRQ(feature, fixture, !fixture.getParent().equals(specFootprint.getItem()));
+		StartTestItemRQ rq = buildFixtureItemRq(feature, fixture, !fixture.getParent().equals(specFootprint.getItem()));
 		Maybe<String> testItemId = startFixture(rq.isHasStats() ?
 				specFootprint.getId() :
 				launchContext.findFeatureFootprint(feature).getId(), rq);
@@ -175,95 +203,135 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		fixtureOwnerFootprint.addFixtureFootprint(new FixtureFootprint(fixture, testItemId));
 	}
 
-	protected void reportFeatureStart(Maybe<String> parentId, FeatureInfo featureInfo) {
-		StartTestItemRQ rq = createFeatureItemRQ(featureInfo);
-		Maybe<String> testItemId = launch.get().startTestItem(parentId, rq);
-		launchContext.addRunningFeature(testItemId, featureInfo);
+	@Nonnull
+	private StartTestItemRQ buildNestedIterationItemRq(@Nonnull IterationInfo iteration) {
+		List<Object> params = Arrays.asList(iteration.getDataValues());
+		List<String> names = iteration.getFeature().getParameterNames();
+		String name = IntStream.range(0, params.size()).mapToObj(i -> {
+			Object p = params.get(i);
+			String n;
+			try {
+				n = names.get(i);
+				n = ofNullable(n).orElse("param" + i + 1);
+			} catch (IndexOutOfBoundsException e) {
+				n = "param" + i + 1;
+			}
+			return Pair.of(n, p);
+		}).map(p -> p.getKey() + ": " + p.getValue()).collect(Collectors.joining("; ", "Parameters: ", ""));
+		StartTestItemRQ rq = buildBaseStartTestItemRq(name, ITEM_TYPES_REGISTRY.get(FEATURE));
+		rq.setHasStats(false);
+
+		return rq;
 	}
 
-	public void registerFeature(FeatureInfo feature) {
-		if (!feature.isReportIterations()) {
-			reportFeatureStart(launchContext.findSpecFootprint(feature.getSpec()).getId(), feature);
-		} else if (!feature.isSkipped()) {
-			launchContext.addRunningFeature(null, feature);
-		}
+	@Nonnull
+	protected StartTestItemRQ buildIterationItemRq(IterationInfo iteration) {
+		StartTestItemRQ rq = buildBaseStartTestItemRq(iteration.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
+		rq.setDescription(buildIterationDescription(iteration));
+		FeatureInfo featureInfo = iteration.getFeature();
+		Description description = featureInfo.getDescription();
+		String codeRef = description.getClassName() + "." + description.getMethodName();
+		rq.setCodeRef(codeRef);
+		Method method = featureInfo.getFeatureMethod().getReflection();
+		TestCaseId testCaseId = method.getAnnotation(TestCaseId.class);
+		List<Object> params = ofNullable(iteration.getDataValues()).map(Arrays::asList).orElse(null);
+		rq.setTestCaseId(ofNullable(TestCaseIdUtils.getTestCaseId(testCaseId, method, codeRef, params)).map(TestCaseIdEntry::getId)
+				.orElse(null));
+		List<Object> paramList = ofNullable(params).orElse(Collections.emptyList());
+		List<String> names = iteration.getFeature().getParameterNames();
+		rq.setParameters(ParameterUtils.getParameters(codeRef,
+				IntStream.range(0, paramList.size()).mapToObj(i -> Pair.of(names.get(i), paramList.get(i))).collect(Collectors.toList())
+		));
+		return rq;
 	}
 
-	public void registerIteration(IterationInfo iteration) {
+	protected Maybe<String> startIteration(Maybe<String> parentId, StartTestItemRQ rq) {
+		return launch.get().startTestItem(parentId, rq);
+	}
+
+	protected void reportIterationStart(Maybe<String> parentId, StartTestItemRQ rq, IterationInfo iteration) {
+		Maybe<String> testItemId = startIteration(parentId, rq);
+		launchContext.addRunningIteration(testItemId, iteration);
+	}
+
+	public void registerIteration(@Nonnull IterationInfo iteration) {
 		if (iteration.getFeature().isReportIterations()) {
 			reportIterationStart(launchContext.findSpecFootprint(iteration.getFeature().getSpec()).getId(),
-					createIterationItemRQ(iteration),
+					buildIterationItemRq(iteration),
 					iteration
 			);
 		} else if (iteration.getFeature().isParameterized()) {
 			reportIterationStart(launchContext.findFeatureFootprint(iteration.getFeature()).getId(),
-					createNestedIterationItemRQ(iteration),
+					buildNestedIterationItemRq(iteration),
 					iteration
 			);
 		}
 	}
 
-	protected FinishTestItemRQ getFinishTestItemRq() {
+	/**
+	 * Build finish test item request object
+	 *
+	 * @param itemId item ID reference
+	 * @param status item result status
+	 * @return finish request
+	 */
+	@Nonnull
+	@SuppressWarnings("unused")
+	protected FinishTestItemRQ buildFinishTestItemRq(@Nonnull Maybe<String> itemId, @Nullable ItemStatus status) {
 		FinishTestItemRQ rq = new FinishTestItemRQ();
+		ofNullable(status).ifPresent(s -> rq.setStatus(s.name()));
 		rq.setEndTime(Calendar.getInstance().getTime());
 		return rq;
 	}
 
-	protected void reportIterationFinish(ReportableItemFootprint<IterationInfo> footprint) {
-		FinishTestItemRQ rq = getFinishTestItemRq();
-		rq.setStatus(footprint.getStatus().map(s -> {
-			if (SKIPPED == s) {
-				rq.setIssue(Launch.NOT_ISSUE);
-			}
-			return s.name();
-		}).orElseGet(() -> {
+	protected void reportIterationFinish(@Nonnull ReportableItemFootprint<IterationInfo> footprint) {
+		ItemStatus status = footprint.getStatus().orElseGet(() -> {
 			footprint.setStatus(ItemStatus.PASSED);
-			return PASSED.name();
-		}));
+			return PASSED;
+		});
+		FinishTestItemRQ rq = buildFinishTestItemRq(footprint.getId(), status);
+		if (SKIPPED == status) {
+			rq.setIssue(Launch.NOT_ISSUE);
+		}
 		launch.get().finishTestItem(footprint.getId(), rq);
 		footprint.markAsPublished();
 	}
 
-	protected void reportFeatureFinish(ReportableItemFootprint<FeatureInfo> footprint) {
-		FinishTestItemRQ rq = getFinishTestItemRq();
-		rq.setStatus(footprint.getStatus().map(s -> {
-			if (SKIPPED == s) {
-				rq.setIssue(Launch.NOT_ISSUE);
-			}
-			return s.name();
-		}).orElseGet(() -> {
+	protected void reportFeatureFinish(@Nonnull ReportableItemFootprint<FeatureInfo> footprint) {
+		ItemStatus status = footprint.getStatus().orElseGet(() -> {
 			FeatureInfo feature = footprint.getItem();
-			ItemStatus status = ItemStatus.PASSED;
+			ItemStatus s = ItemStatus.PASSED;
 			for (NodeFootprint<IterationInfo> childItemFootprint : launchContext.findIterationFootprints(feature)) {
 				for (ReportableItemFootprint<MethodInfo> fixtureFootprint : childItemFootprint.getFixtures()) {
 					if (fixtureFootprint.getItem().getKind().isSetupMethod()) {
-						status = StatusEvaluation.evaluateStatus(status, fixtureFootprint.getStatus().orElse(null));
+						s = StatusEvaluation.evaluateStatus(s, fixtureFootprint.getStatus().orElse(null));
 					}
 				}
-				status = StatusEvaluation.evaluateStatus(status, childItemFootprint.getStatus().orElse(null));
+				s = StatusEvaluation.evaluateStatus(s, childItemFootprint.getStatus().orElse(null));
 			}
-			return ofNullable(status).map(Enum::name).orElseGet(() -> {
+			return ofNullable(s).orElseGet(() -> {
 				LOGGER.error("Unable to calculate status for feature", new IllegalStateException());
-				return FAILED.name();
+				return FAILED;
 			});
-		}));
-		launch.get().finishTestItem(footprint.getId(), rq);
+		});
+
+		Maybe<String> itemId = footprint.getId();
+		FinishTestItemRQ rq = buildFinishTestItemRq(itemId, status);
+		if (SKIPPED == status) {
+			rq.setIssue(Launch.NOT_ISSUE);
+		}
+		launch.get().finishTestItem(itemId, rq);
 		footprint.markAsPublished();
 	}
 
-	protected void reportTestItemFinish(ReportableItemFootprint<?> footprint) {
-		FinishTestItemRQ rq = getFinishTestItemRq();
-		rq.setStatus(footprint.getStatus().map(Enum::name).orElse(ItemStatus.PASSED.name()));
-		launch.get().finishTestItem(footprint.getId(), rq);
+	protected void reportTestItemFinish(@Nonnull ReportableItemFootprint<?> footprint) {
+		Maybe<String> itemId = footprint.getId();
+		FinishTestItemRQ rq = buildFinishTestItemRq(itemId, footprint.getStatus().orElse(ItemStatus.PASSED));
+		launch.get().finishTestItem(itemId, rq);
 		footprint.markAsPublished();
 	}
 
-	public void publishSpecResult(SpecInfo spec) {
-		ReportableItemFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
-		reportTestItemFinish(specFootprint);
-	}
-
-	public void publishFeatureResult(FeatureInfo feature) {
+	public void publishFeatureResult(@Nonnull FeatureInfo feature) {
 		if (feature.isReportIterations()) {
 			Iterable<? extends ReportableItemFootprint<IterationInfo>> iterations = launchContext.findIterationFootprints(feature);
 			StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterations.iterator(), Spliterator.SIZED), false)
@@ -275,20 +343,29 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
-	public void publishIterationResult(IterationInfo iteration) {
-		FeatureInfo feature = iteration.getFeature();
-		if (!feature.isReportIterations() && !feature.isParameterized()) {
-			return;
-		}
-		ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(iteration);
-		reportIterationFinish(footprint);
+	@Nonnull
+	protected StartTestItemRQ buildFeatureItemRq(@Nonnull FeatureInfo featureInfo) {
+		StartTestItemRQ rq = buildBaseStartTestItemRq(featureInfo.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
+		rq.setDescription(buildFeatureDescription(featureInfo));
+		Description description = featureInfo.getDescription();
+		String codeRef = description.getClassName() + "." + description.getMethodName();
+		rq.setCodeRef(codeRef);
+		Method method = featureInfo.getFeatureMethod().getReflection();
+		TestCaseId testCaseId = method.getAnnotation(TestCaseId.class);
+		rq.setTestCaseId(ofNullable(TestCaseIdUtils.getTestCaseId(testCaseId, method, codeRef, null)).map(TestCaseIdEntry::getId)
+				.orElse(null));
+		setFeatureAttributes(rq, featureInfo);
+		return rq;
 	}
 
-	@SuppressWarnings("rawtypes")
-	public void publishFixtureResult(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
-		NodeFootprint<? extends NodeInfo> ownerFootprint = findFixtureOwner(spec, feature, iteration, fixture);
-		ReportableItemFootprint<MethodInfo> fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(fixture);
-		reportTestItemFinish(fixtureFootprint);
+	@Nonnull
+	protected Maybe<String> startFeature(@Nonnull Maybe<String> parentId, @Nonnull StartTestItemRQ rq) {
+		return launch.get().startTestItem(parentId, rq);
+	}
+
+	protected void reportFeatureStart(@Nonnull Maybe<String> parentId, @Nonnull FeatureInfo featureInfo) {
+		StartTestItemRQ rq = buildFeatureItemRq(featureInfo);
+		launchContext.addRunningFeature(startFeature(parentId, rq), featureInfo);
 	}
 
 	public void reportFixtureError(@Nonnull SpecInfo spec, @Nullable FeatureInfo feature, @Nullable IterationInfo iteration,
@@ -325,12 +402,12 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 				.error(exception.getLocalizedMessage(), StackTraceUtils.deepSanitize(exception));
 	}
 
-	protected void logError(ErrorInfo error) {
+	protected void logError(@Nonnull ErrorInfo error) {
 		Throwable exception = error.getException();
 		LoggerFactory.getLogger(error.getMethod().getReflection().getDeclaringClass()).error(exception.getLocalizedMessage(), exception);
 	}
 
-	public void reportError(ErrorInfo error) {
+	public void reportError(@Nonnull ErrorInfo error) {
 		MethodInfo method = error.getMethod();
 		MethodKind kind = error.getMethod().getKind();
 		if (FEATURE == kind || FEATURE_EXECUTION == kind) {
@@ -368,16 +445,11 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 			}
 
 			// finish launch
-			FinishExecutionRQ rq = createFinishExecutionRQ();
+			FinishExecutionRQ rq = buildFinishExecutionRq();
 			rq.setEndTime(Calendar.getInstance().getTime());
 			launch.get().finish(rq);
 			this.launch.reset();
 		}
-	}
-
-	protected void reportIterationStart(Maybe<String> id, StartTestItemRQ rq, IterationInfo iteration) {
-		Maybe<String> testItemId = launch.get().startTestItem(id, rq);
-		launchContext.addRunningIteration(testItemId, iteration);
 	}
 
 	void handleRpException(ReportPortalException rpException, String message) {
@@ -413,32 +485,10 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
-	private FinishExecutionRQ createFinishExecutionRQ() {
+	@Nonnull
+	private FinishExecutionRQ buildFinishExecutionRq() {
 		FinishExecutionRQ rq = new FinishExecutionRQ();
 		rq.setEndTime(Calendar.getInstance().getTime());
-		return rq;
-	}
-
-	private StartLaunchRQ createStartLaunchRQ() {
-		StartLaunchRQ startLaunchRQ = new StartLaunchRQ();
-		startLaunchRQ.setName(launchParameters.getLaunchName());
-		if (!isNullOrEmpty(launchParameters.getDescription())) {
-			startLaunchRQ.setDescription(launchParameters.getDescription());
-		}
-		startLaunchRQ.setStartTime(Calendar.getInstance().getTime());
-		if (!launchParameters.getAttributes().isEmpty()) {
-			startLaunchRQ.setAttributes(launchParameters.getAttributes());
-		}
-		startLaunchRQ.setMode(launchParameters.getLaunchRunningMode());
-		return startLaunchRQ;
-	}
-
-	protected StartTestItemRQ createBaseStartTestItemRQ(String name, String type) {
-		StartTestItemRQ rq = new StartTestItemRQ();
-		rq.setName(name);
-		rq.setStartTime(Calendar.getInstance().getTime());
-		rq.setType(type);
-		rq.setLaunchUuid(launchContext.getLaunchId().blockingGet());
 		return rq;
 	}
 
@@ -446,58 +496,33 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		setAttributes(rq, featureInfo.getFeatureMethod().getReflection());
 	}
 
-	protected StartTestItemRQ createFeatureItemRQ(FeatureInfo featureInfo) {
-		StartTestItemRQ rq = createBaseStartTestItemRQ(featureInfo.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
-		rq.setDescription(buildFeatureDescription(featureInfo));
-		Description description = featureInfo.getDescription();
-		String codeRef = description.getClassName() + "." + description.getMethodName();
-		rq.setCodeRef(codeRef);
-		Method method = featureInfo.getFeatureMethod().getReflection();
-		TestCaseId testCaseId = method.getAnnotation(TestCaseId.class);
-		rq.setTestCaseId(ofNullable(TestCaseIdUtils.getTestCaseId(testCaseId, method, codeRef, null)).map(TestCaseIdEntry::getId)
-				.orElse(null));
-		setFeatureAttributes(rq, featureInfo);
-		return rq;
+	public void registerFeature(@Nonnull FeatureInfo feature) {
+		if (!feature.isReportIterations()) {
+			reportFeatureStart(launchContext.findSpecFootprint(feature.getSpec()).getId(), feature);
+		} else if (!feature.isSkipped()) {
+			launchContext.addRunningFeature(null, feature);
+		}
 	}
 
-	private StartTestItemRQ createIterationItemRQ(IterationInfo iteration) {
-		StartTestItemRQ rq = createBaseStartTestItemRQ(iteration.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
-		rq.setDescription(buildIterationDescription(iteration));
-		FeatureInfo featureInfo = iteration.getFeature();
-		Description description = featureInfo.getDescription();
-		String codeRef = description.getClassName() + "." + description.getMethodName();
-		rq.setCodeRef(codeRef);
-		Method method = featureInfo.getFeatureMethod().getReflection();
-		TestCaseId testCaseId = method.getAnnotation(TestCaseId.class);
-		List<Object> params = ofNullable(iteration.getDataValues()).map(Arrays::asList).orElse(null);
-		rq.setTestCaseId(ofNullable(TestCaseIdUtils.getTestCaseId(testCaseId, method, codeRef, params)).map(TestCaseIdEntry::getId)
-				.orElse(null));
-		List<Object> paramList = ofNullable(params).orElse(Collections.emptyList());
-		List<String> names = iteration.getFeature().getParameterNames();
-		rq.setParameters(ParameterUtils.getParameters(codeRef,
-				IntStream.range(0, paramList.size()).mapToObj(i -> Pair.of(names.get(i), paramList.get(i))).collect(Collectors.toList())
-		));
-		return rq;
+	public void publishSpecResult(SpecInfo spec) {
+		ReportableItemFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
+		reportTestItemFinish(specFootprint);
 	}
 
-	private StartTestItemRQ createNestedIterationItemRQ(IterationInfo iteration) {
-		List<Object> params = Arrays.asList(iteration.getDataValues());
-		List<String> names = iteration.getFeature().getParameterNames();
-		String name = IntStream.range(0, params.size()).mapToObj(i -> {
-			Object p = params.get(i);
-			String n;
-			try {
-				n = names.get(i);
-				n = ofNullable(n).orElse("param" + i + 1);
-			} catch (IndexOutOfBoundsException e) {
-				n = "param" + i + 1;
-			}
-			return Pair.of(n, p);
-		}).map(p -> p.getKey() + ": " + p.getValue()).collect(Collectors.joining("; ", "Parameters: ", ""));
-		StartTestItemRQ rq = createBaseStartTestItemRQ(name, ITEM_TYPES_REGISTRY.get(FEATURE));
-		rq.setHasStats(false);
+	public void publishIterationResult(@Nonnull IterationInfo iteration) {
+		FeatureInfo feature = iteration.getFeature();
+		if (!feature.isReportIterations() && !feature.isParameterized()) {
+			return;
+		}
+		ReportableItemFootprint<IterationInfo> footprint = launchContext.findIterationFootprint(iteration);
+		reportIterationFinish(footprint);
+	}
 
-		return rq;
+	@SuppressWarnings("rawtypes")
+	public void publishFixtureResult(SpecInfo spec, FeatureInfo feature, IterationInfo iteration, MethodInfo fixture) {
+		NodeFootprint<? extends NodeInfo> ownerFootprint = findFixtureOwner(spec, feature, iteration, fixture);
+		ReportableItemFootprint<MethodInfo> fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(fixture);
+		reportTestItemFinish(fixtureFootprint);
 	}
 
 	@Override

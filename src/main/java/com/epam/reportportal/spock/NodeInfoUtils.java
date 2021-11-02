@@ -128,7 +128,7 @@ final class NodeInfoUtils {
 		Object[] dataValues = iterationInfo.getDataValues();
 		if (!parameterNames.isEmpty() && dataValues != null) {
 			iterationDescription += "\n" + IntStream.range(0, parameterNames.size())
-					.mapToObj(i -> parameterNames.get(i) + ": " + dataValues[i].toString())
+					.mapToObj(i -> parameterNames.get(i) + ": " + String.valueOf(dataValues[i]))
 					.collect(Collectors.joining("; "));
 		}
 
