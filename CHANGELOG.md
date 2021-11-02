@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+### Fixed
+- [Issue #26](https://github.com/reportportal/agent-java-spock/issues/26): NullPointerException when data value has null value
 
 ## [5.1.0-RC-2]
 ### Added
