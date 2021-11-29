@@ -70,7 +70,7 @@ repositories {
 
 *ReportPortal agent implementation for Spock framework*
 ```gradle
-testCompile 'com.epam.reportportal:agent-java-spock:5.1.0-RC-3'
+testCompile 'com.epam.reportportal:agent-java-spock:5.1.0-RC-4'
 ```
 
 *Selenium support*
@@ -179,7 +179,7 @@ repositories {
 }
 
 dependencies {
-    testCompile 'com.epam.reportportal:agent-java-spock:5.1.0-RC-3'
+    testCompile 'com.epam.reportportal:agent-java-spock:5.1.0-RC-4'
     testCompile 'com.epam.reportportal:logger-java-logback:5.1.0-RC-1'
 
     testCompile "org.seleniumhq.selenium:selenium-support:$seleniumVersion"
