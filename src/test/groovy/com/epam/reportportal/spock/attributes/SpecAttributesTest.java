@@ -66,7 +66,7 @@ public class SpecAttributesTest {
 		Set<ItemAttributesRQ> attributes = captor.getValue().getAttributes();
 		assertThat(attributes, hasSize(1));
 		ItemAttributesRQ attribute = attributes.iterator().next();
-		assertThat(attribute.getKey(), equalTo("key"));
-		assertThat(attribute.getValue(), equalTo("value"));
+		assertThat(attribute.getKey(), equalTo(SpecAttributes.KEY));
+		assertThat(attribute.getValue(), equalTo(SpecAttributes.VALUE));
 	}
 }
