@@ -20,8 +20,12 @@ import com.epam.reportportal.annotations.attribute.Attribute
 import com.epam.reportportal.annotations.attribute.Attributes
 import spock.lang.Specification
 
-@Attributes(attributes = @Attribute(key = "key", value = "value"))
+@SuppressWarnings('UnnecessaryQualifiedReference')
+@Attributes(attributes = @Attribute(key = SpecAttributes.KEY, value = SpecAttributes.VALUE))
 class SpecAttributes extends Specification {
+    public static final String KEY = "attribute_test_key";
+    public static final String VALUE = "attribute_test_value";
+
     def "my empty fixture"() {
         expect:
         //noinspection GroovyPointlessBoolean

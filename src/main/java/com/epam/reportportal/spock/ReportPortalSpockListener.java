@@ -164,6 +164,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		return rq;
 	}
 
+	@Nonnull
 	protected Maybe<String> startSpec(@Nonnull StartTestItemRQ rq) {
 		return launch.get().startTestItem(rq);
 	}
@@ -204,7 +205,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	}
 
 	@Nonnull
-	private StartTestItemRQ buildNestedIterationItemRq(@Nonnull IterationInfo iteration) {
+	protected StartTestItemRQ buildNestedIterationItemRq(@Nonnull IterationInfo iteration) {
 		List<Object> params = Arrays.asList(iteration.getDataValues());
 		List<String> names = iteration.getFeature().getParameterNames();
 		String name = IntStream.range(0, params.size()).mapToObj(i -> {
@@ -225,7 +226,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	}
 
 	@Nonnull
-	protected StartTestItemRQ buildIterationItemRq(IterationInfo iteration) {
+	protected StartTestItemRQ buildIterationItemRq(@Nonnull IterationInfo iteration) {
 		StartTestItemRQ rq = buildBaseStartTestItemRq(iteration.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
 		rq.setDescription(buildIterationDescription(iteration));
 		FeatureInfo featureInfo = iteration.getFeature();
@@ -245,11 +246,12 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		return rq;
 	}
 
-	protected Maybe<String> startIteration(Maybe<String> parentId, StartTestItemRQ rq) {
+	@Nonnull
+	protected Maybe<String> startIteration(@Nonnull Maybe<String> parentId, @Nonnull StartTestItemRQ rq) {
 		return launch.get().startTestItem(parentId, rq);
 	}
 
-	protected void reportIterationStart(Maybe<String> parentId, StartTestItemRQ rq, IterationInfo iteration) {
+	protected void reportIterationStart(@Nonnull Maybe<String> parentId, @Nonnull StartTestItemRQ rq, @Nonnull IterationInfo iteration) {
 		Maybe<String> testItemId = startIteration(parentId, rq);
 		launchContext.addRunningIteration(testItemId, iteration);
 	}
@@ -436,6 +438,13 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		footprint.setStatus(SKIPPED);
 	}
 
+	@Nonnull
+	private FinishExecutionRQ buildFinishExecutionRq() {
+		FinishExecutionRQ rq = new FinishExecutionRQ();
+		rq.setEndTime(Calendar.getInstance().getTime());
+		return rq;
+	}
+
 	public void finishLaunch() {
 		if (launchContext.tryFinishLaunch()) {
 			// publish all registered unpublished specifications first
@@ -446,7 +455,6 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 			// finish launch
 			FinishExecutionRQ rq = buildFinishExecutionRq();
-			rq.setEndTime(Calendar.getInstance().getTime());
 			launch.get().finish(rq);
 			this.launch.reset();
 		}
@@ -485,13 +493,6 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
-	@Nonnull
-	private FinishExecutionRQ buildFinishExecutionRq() {
-		FinishExecutionRQ rq = new FinishExecutionRQ();
-		rq.setEndTime(Calendar.getInstance().getTime());
-		return rq;
-	}
-
 	protected void setFeatureAttributes(@Nonnull StartTestItemRQ rq, @Nonnull FeatureInfo featureInfo) {
 		setAttributes(rq, featureInfo.getFeatureMethod().getReflection());
 	}
@@ -504,7 +505,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
-	public void publishSpecResult(SpecInfo spec) {
+	public void publishSpecResult(@Nonnull SpecInfo spec) {
 		ReportableItemFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
 		reportTestItemFinish(specFootprint);
 	}
@@ -526,7 +527,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	}
 
 	@Override
-	public void beforeSpec(SpecInfo spec) {
+	public void beforeSpec(@Nonnull SpecInfo spec) {
 		registerSpec(spec);
 		for (MethodInfo fixture : spec.getAllFixtureMethods()) {
 			fixture.addInterceptor(new FixtureInterceptor(this));

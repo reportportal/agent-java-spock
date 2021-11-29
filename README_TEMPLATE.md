@@ -105,7 +105,7 @@ If you prefer using *Logback* logging library, add following dependencies:
 
 *ReportPortal logback logger dependency*
 ```gradle
-testCompile 'com.epam.reportportal:logger-java-logback:5.0.3'
+testCompile 'com.epam.reportportal:logger-java-logback:5.1.0-RC-1'
 ```
 
 > Up to date version could be found [here](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22logger-java-logback%22)
@@ -119,7 +119,7 @@ If you prefer using *Log4j* logging library, add following dependencies:
 
 *ReportPortal log4j logger dependency*
 ```gradle
-testCompile 'com.epam.reportportal:logger-java-log4j:5.0.3'
+testCompile 'com.epam.reportportal:logger-java-log4j:5.1.0-RC-1'
 ```
 > Up to date version could be found [here](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22logger-java-log4j%22)
 
@@ -180,7 +180,7 @@ repositories {
 
 dependencies {
     testCompile 'com.epam.reportportal:agent-java-spock:$LATEST_VERSION'
-    testCompile 'com.epam.reportportal:logger-java-logback:5.0.3'
+    testCompile 'com.epam.reportportal:logger-java-logback:5.1.0-RC-1'
 
     testCompile "org.seleniumhq.selenium:selenium-support:$seleniumVersion"
     testCompile "org.gebish:geb-spock:$gebVersion"
