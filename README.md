@@ -119,14 +119,14 @@ If you prefer using *Log4j* logging library, add following dependencies:
 
 *ReportPortal log4j logger dependency*
 ```gradle
-testCompile 'com.epam.reportportal:logger-java-log4j:5.1.1'
+testCompile 'com.epam.reportportal:logger-java-log4j:5.1.2'
 ```
 > Up to date version could be found [here](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22logger-java-log4j%22)
 
 *The log4j itself*
 ```gradle
-compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.15.0'
-compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.15.0'
+compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.16.0'
+compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.16.0'
 ```
 
 #### 2.4 Create gradle tasks for tests
