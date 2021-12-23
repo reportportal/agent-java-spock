@@ -21,7 +21,6 @@ on:
     paths-ignore:
     - README.md
     - README_TEMPLATE.md
-    - gradle.properties
     - CHANGELOG.md
 
   pull_request:
