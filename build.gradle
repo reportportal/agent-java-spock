@@ -40,21 +40,21 @@ repositories {
 }
 
 dependencies {
-    api "com.epam.reportportal:client-java:${client_version}"
-    api "com.epam.reportportal:commons-model:${commons_version}"
+    api "com.epam.reportportal:client-java:5.1.9"
+    api "com.epam.reportportal:commons-model:5.0.0"
     api "org.spockframework:spock-core:${spock_version}"
     api 'com.google.code.findbugs:jsr305:3.0.2'
-    implementation 'org.slf4j:slf4j-api:1.7.25'
+    implementation 'org.slf4j:slf4j-api:1.7.36'
 
     testImplementation 'org.codehaus.groovy:groovy:2.5.14'
-    testImplementation 'com.github.reportportal:agent-java-test-utils:3d4d206'
+    testImplementation 'com.github.reportportal:agent-java-test-utils:236a68c'
     testImplementation 'org.aspectj:aspectjweaver:1.9.2'
     testImplementation 'org.hamcrest:hamcrest-core:2.2'
     testImplementation "org.mockito:mockito-core:${mockito_version}"
     testImplementation "org.mockito:mockito-inline:${mockito_version}"
     testImplementation "org.mockito:mockito-junit-jupiter:${mockito_version}"
-    testImplementation 'ch.qos.logback:logback-classic:1.2.3'
-    testImplementation 'com.epam.reportportal:logger-java-logback:5.0.3'
+    testImplementation 'ch.qos.logback:logback-classic:1.2.11'
+    testImplementation 'com.epam.reportportal:logger-java-logback:5.1.1'
     testImplementation ("org.junit.platform:junit-platform-runner:${junit5_launcher_version}") {
         exclude module: 'junit'
     }

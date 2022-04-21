@@ -105,28 +105,28 @@ If you prefer using *Logback* logging library, add following dependencies:
 
 *ReportPortal logback logger dependency*
 ```gradle
-testCompile 'com.epam.reportportal:logger-java-logback:5.1.0-RC-1'
+testCompile 'com.epam.reportportal:logger-java-logback:5.1.1'
 ```
 
 > Up to date version could be found [here](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22logger-java-logback%22)
 
 *The logback itself*
 ```gradle
-compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
+compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.10'
 ```
 
 If you prefer using *Log4j* logging library, add following dependencies:
 
 *ReportPortal log4j logger dependency*
 ```gradle
-testCompile 'com.epam.reportportal:logger-java-log4j:5.1.0-RC-1'
+testCompile 'com.epam.reportportal:logger-java-log4j:5.1.4'
 ```
 > Up to date version could be found [here](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22logger-java-log4j%22)
 
 *The log4j itself*
 ```gradle
-compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.13.2'
-compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.13.2'
+compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.17.1'
+compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.17.1'
 ```
 
 #### 2.4 Create gradle tasks for tests
@@ -180,7 +180,7 @@ repositories {
 
 dependencies {
     testCompile 'com.epam.reportportal:agent-java-spock:$LATEST_VERSION'
-    testCompile 'com.epam.reportportal:logger-java-logback:5.1.0-RC-1'
+    testCompile 'com.epam.reportportal:logger-java-logback:5.1.1'
 
     testCompile "org.seleniumhq.selenium:selenium-support:$seleniumVersion"
     testCompile "org.gebish:geb-spock:$gebVersion"
@@ -195,7 +195,7 @@ dependencies {
     testCompile "org.seleniumhq.selenium:selenium-firefox-driver:$seleniumVersion"
     testCompile "org.seleniumhq.selenium:selenium-ie-driver:$seleniumVersion"
 
-    compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
+    compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.10'
 }
 
 drivers.each { driver ->
