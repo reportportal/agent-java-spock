@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [5.1.0-RC-6]
 ### Added
 - System attribute reporting
 ### Changed
