@@ -23,6 +23,7 @@ import com.epam.reportportal.listeners.ListenerParameters;
 import com.epam.reportportal.service.Launch;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.item.TestCaseIdEntry;
+import com.epam.reportportal.spock.utils.SystemAttributesFetcher;
 import com.epam.reportportal.utils.*;
 import com.epam.ta.reportportal.ws.model.FinishExecutionRQ;
 import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
@@ -88,10 +89,12 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 			startLaunchRQ.setDescription(parameters.getDescription());
 		}
 		startLaunchRQ.setStartTime(Calendar.getInstance().getTime());
-		if (!parameters.getAttributes().isEmpty()) {
-			startLaunchRQ.setAttributes(parameters.getAttributes());
-		}
+		Set<ItemAttributesRQ> attributes = new HashSet<>();
+		attributes.addAll(parameters.getAttributes());
+		attributes.addAll(SystemAttributesFetcher.collectSystemAttributes(parameters.getSkippedAnIssue()));
+		startLaunchRQ.setAttributes(attributes);
 		startLaunchRQ.setMode(parameters.getLaunchRunningMode());
+
 		return startLaunchRQ;
 	}
 
