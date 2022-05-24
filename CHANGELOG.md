@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+### Removed
+- `finally` keyword, see [JEP 421](https://openjdk.java.net/jeps/421), by @HardNorth
 
 ## [5.1.0-RC-6]
 ### Added

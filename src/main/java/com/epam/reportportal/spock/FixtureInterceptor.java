@@ -23,25 +23,22 @@ class FixtureInterceptor implements IMethodInterceptor {
 	@Override
 	public void intercept(IMethodInvocation invocation) throws Throwable {
 		spockService.registerFixture(invocation.getSpec(), invocation.getFeature(), invocation.getIteration(), invocation.getMethod());
+		Throwable exception = null;
 		try {
 			invocation.proceed();
 		} catch (Throwable ex) {
+			exception = ex;
 			// explicitly report exception to has an ability to track error
 			// before result publishing
-			spockService.reportFixtureError(
-					invocation.getSpec(),
+			spockService.reportFixtureError(invocation.getSpec(),
 					invocation.getFeature(),
 					invocation.getIteration(),
 					new ErrorInfo(invocation.getMethod(), ex)
 			);
-			throw ex;
-		} finally {
-			spockService.publishFixtureResult(
-					invocation.getSpec(),
-					invocation.getFeature(),
-					invocation.getIteration(),
-					invocation.getMethod()
-			);
+		}
+		spockService.publishFixtureResult(invocation.getSpec(), invocation.getFeature(), invocation.getIteration(), invocation.getMethod());
+		if (exception != null) {
+			throw exception;
 		}
 	}
 }
