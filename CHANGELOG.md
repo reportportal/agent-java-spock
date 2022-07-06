@@ -5,6 +5,8 @@
 - Spock 2.0 compatibility, by @mihalichzh
 ### Removed
 - `finally` keyword, see [JEP 421](https://openjdk.java.net/jeps/421), by @HardNorth
+### Changed
+- Client version updated on [5.1.11](https://github.com/reportportal/client-java/releases/tag/5.1.11), by @HardNorth
 
 ## [5.1.0-RC-6]
 ### Added
