@@ -35,7 +35,6 @@ import com.google.common.collect.ImmutableMap;
 import io.reactivex.Maybe;
 import org.apache.commons.lang3.tuple.Pair;
 import org.codehaus.groovy.runtime.StackTraceUtils;
-import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spockframework.runtime.AbstractRunListener;
@@ -162,7 +161,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	protected StartTestItemRQ buildSpecItemRq(@Nonnull SpecInfo spec) {
 		StartTestItemRQ rq = buildBaseStartTestItemRq(spec.getName(), ITEM_TYPES_REGISTRY.get(SPEC_EXECUTION));
 		rq.setDescription(spec.getNarrative());
-		rq.setCodeRef(spec.getDescription().getClassName());
+		rq.setCodeRef(spec.getReflection().getCanonicalName());
 		setSpecAttributes(rq, spec);
 		return rq;
 	}
@@ -232,11 +231,10 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	protected StartTestItemRQ buildIterationItemRq(@Nonnull IterationInfo iteration) {
 		StartTestItemRQ rq = buildBaseStartTestItemRq(iteration.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
 		rq.setDescription(buildIterationDescription(iteration));
-		FeatureInfo featureInfo = iteration.getFeature();
-		Description description = featureInfo.getDescription();
-		String codeRef = description.getClassName() + "." + description.getMethodName();
+		MethodInfo featureMethodInfo = iteration.getFeature().getFeatureMethod();
+		String codeRef = extractCodeRef(featureMethodInfo);
 		rq.setCodeRef(codeRef);
-		Method method = featureInfo.getFeatureMethod().getReflection();
+		Method method = featureMethodInfo.getReflection();
 		TestCaseId testCaseId = method.getAnnotation(TestCaseId.class);
 		List<Object> params = ofNullable(iteration.getDataValues()).map(Arrays::asList).orElse(null);
 		rq.setTestCaseId(ofNullable(TestCaseIdUtils.getTestCaseId(testCaseId, method, codeRef, params)).map(TestCaseIdEntry::getId)
@@ -352,10 +350,10 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	protected StartTestItemRQ buildFeatureItemRq(@Nonnull FeatureInfo featureInfo) {
 		StartTestItemRQ rq = buildBaseStartTestItemRq(featureInfo.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
 		rq.setDescription(buildFeatureDescription(featureInfo));
-		Description description = featureInfo.getDescription();
-		String codeRef = description.getClassName() + "." + description.getMethodName();
+		MethodInfo featureMethodInfo = featureInfo.getFeatureMethod();
+		String codeRef = extractCodeRef(featureMethodInfo);
 		rq.setCodeRef(codeRef);
-		Method method = featureInfo.getFeatureMethod().getReflection();
+		Method method = featureMethodInfo.getReflection();
 		TestCaseId testCaseId = method.getAnnotation(TestCaseId.class);
 		rq.setTestCaseId(ofNullable(TestCaseIdUtils.getTestCaseId(testCaseId, method, codeRef, null)).map(TestCaseIdEntry::getId)
 				.orElse(null));
@@ -577,5 +575,11 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	public void specSkipped(SpecInfo spec) {
 		trackSkippedSpec(spec);
 		publishSpecResult(spec);
+	}
+
+	private String extractCodeRef(MethodInfo featureMethodInfo) {
+		String iterationClassName = featureMethodInfo.getReflection().getDeclaringClass().getCanonicalName();
+		String iterationMethodName = featureMethodInfo.getName();
+		return iterationClassName + "." + iterationMethodName;
 	}
 }
