@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [5.1.0]
 ### Added
 - Spock 2.0 compatibility, by @mihalichzh
 ### Removed
