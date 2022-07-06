@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- Spock 2.0 compatibility, by @mihalichzh
 ### Removed
 - `finally` keyword, see [JEP 421](https://openjdk.java.net/jeps/421), by @HardNorth
 
