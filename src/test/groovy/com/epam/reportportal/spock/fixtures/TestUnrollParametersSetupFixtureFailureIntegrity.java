@@ -46,7 +46,9 @@ import static org.mockito.Mockito.*;
 
 public class TestUnrollParametersSetupFixtureFailureIntegrity {
 	private final String classId = CommonUtils.namedId("class_");
-	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(6).collect(Collectors.toList());
+	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_"))
+			.limit(6)
+			.collect(Collectors.toList());
 
 	private final ReportPortalClient client = mock(ReportPortalClient.class);
 
@@ -54,7 +56,11 @@ public class TestUnrollParametersSetupFixtureFailureIntegrity {
 	public void setupMock() {
 		TestUtils.mockLaunch(client, null, classId, methodIds);
 		TestUtils.mockBatchLogging(client);
-		TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(client, standardParameters(), testExecutor()));
+		TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(
+				client,
+				standardParameters(),
+				testExecutor()
+		));
 	}
 
 	@Test
@@ -91,9 +97,10 @@ public class TestUnrollParametersSetupFixtureFailureIntegrity {
 				ItemStatus.SKIPPED.name()
 		));
 		finishItems.forEach(i -> assertThat(i.getEndTime(), notNullValue()));
-		finishItems.stream()
-				.filter(i -> ItemStatus.SKIPPED.name().equals(i.getStatus()))
-				.forEach(i -> assertThat(i.getIssue(), sameInstance(Launch.NOT_ISSUE)));
+		finishItems.stream().filter(i -> ItemStatus.SKIPPED.name().equals(i.getStatus())).forEach(i -> {
+			assertThat(i.getIssue(), notNullValue());
+			assertThat(i.getIssue().getIssueType(), equalTo(Launch.NOT_ISSUE.getIssueType()));
+		});
 
 		verify(client).finishTestItem(eq(classId), any());
 		//noinspection unchecked
