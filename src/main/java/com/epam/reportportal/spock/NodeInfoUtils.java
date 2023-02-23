@@ -46,7 +46,7 @@ final class NodeInfoUtils {
 	private static final Map<BlockKind, String> BLOCK_NAMES = new ConcurrentHashMap<>();
 
 	private static final Predicate<BlockInfo> SKIP_BLOCK_CONDITION = info -> ofNullable(info).filter(i -> WHERE.equals(i.getKind()))
-			.map(i -> i.getTexts().stream().allMatch(StringUtils::isNotBlank))
+			.map(i -> i.getTexts().stream().allMatch(StringUtils::isBlank))
 			.orElse(Boolean.FALSE);
 
 	private NodeInfoUtils() {
