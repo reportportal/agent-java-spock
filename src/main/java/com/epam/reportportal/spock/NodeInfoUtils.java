@@ -15,21 +15,20 @@
  */
 package com.epam.reportportal.spock;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
+import org.apache.commons.lang3.StringUtils;
 import org.spockframework.runtime.model.*;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static java.lang.String.format;
-import static java.util.Collections.synchronizedMap;
+import static java.util.Optional.ofNullable;
 import static org.spockframework.runtime.model.BlockKind.WHERE;
 
 /**
@@ -39,24 +38,16 @@ import static org.spockframework.runtime.model.BlockKind.WHERE;
  * @author Dzmitry Mikhievich
  */
 final class NodeInfoUtils {
-
-	@VisibleForTesting
 	static final String INHERITED_FIXTURE_NAME_TEMPLATE = "%s:%s";
 	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
 	private static final String BLOCK_SPLITTER = ": ";
 	private static final String CONJUNCTION_KEYWORD = "And";
 
-	private static final Map<BlockKind, String> BLOCK_NAMES = synchronizedMap(Maps.newEnumMap(BlockKind.class));
+	private static final Map<BlockKind, String> BLOCK_NAMES = new ConcurrentHashMap<>();
 
-	private static final Predicate<BlockInfo> SKIP_BLOCK_CONDITION = info -> {
-		if (info != null) {
-			boolean isWhereBlock = WHERE.equals(info.getKind());
-			if (isWhereBlock) {
-				return Iterables.all(info.getTexts(), Strings::isNullOrEmpty);
-			}
-		}
-		return false;
-	};
+	private static final Predicate<BlockInfo> SKIP_BLOCK_CONDITION = info -> ofNullable(info).filter(i -> WHERE.equals(i.getKind()))
+			.map(i -> i.getTexts().stream().allMatch(StringUtils::isNotBlank))
+			.orElse(Boolean.FALSE);
 
 	private NodeInfoUtils() {
 	}
@@ -128,7 +119,7 @@ final class NodeInfoUtils {
 		Object[] dataValues = iterationInfo.getDataValues();
 		if (!parameterNames.isEmpty() && dataValues != null) {
 			iterationDescription += "\n" + IntStream.range(0, parameterNames.size())
-					.mapToObj(i -> parameterNames.get(i) + ": " + String.valueOf(dataValues[i]))
+					.mapToObj(i -> parameterNames.get(i) + ": " + dataValues[i])
 					.collect(Collectors.joining("; "));
 		}
 
@@ -144,7 +135,10 @@ final class NodeInfoUtils {
 		}
 		// append conjunction blocks
 		while (textsIterator.hasNext()) {
-			featureDescription.append(LINE_SEPARATOR).append(CONJUNCTION_KEYWORD).append(BLOCK_SPLITTER).append(textsIterator.next());
+			featureDescription.append(LINE_SEPARATOR)
+					.append(CONJUNCTION_KEYWORD)
+					.append(BLOCK_SPLITTER)
+					.append(textsIterator.next());
 		}
 	}
 
@@ -155,20 +149,9 @@ final class NodeInfoUtils {
 	 * @return capitalized block kind name
 	 */
 	private static String formatBlockKind(BlockKind blockKind) {
-		if (BLOCK_NAMES.containsKey(blockKind)) {
-			return BLOCK_NAMES.get(blockKind);
-		} else {
-			char[] initialChars = blockKind.name().toCharArray();
-			char[] buffer = new char[initialChars.length];
-			buffer[0] = initialChars[0];
-			// iterate over characters excluding the first one
-			for (int i = 1; i < initialChars.length; i++) {
-				char ch = initialChars[i];
-				buffer[i] = Character.toLowerCase(ch);
-			}
-			String blockName = new String(buffer);
-			BLOCK_NAMES.put(blockKind, blockName);
-			return blockName;
-		}
+		return BLOCK_NAMES.computeIfAbsent(blockKind, b -> {
+			String blockName = b.name();
+			return blockName.charAt(0) + blockName.substring(1).toLowerCase(Locale.US);
+		});
 	}
 }
