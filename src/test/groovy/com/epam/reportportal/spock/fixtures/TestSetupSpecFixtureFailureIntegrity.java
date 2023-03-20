@@ -81,7 +81,10 @@ public class TestSetupSpecFixtureFailureIntegrity {
 		finishItems.forEach(i -> assertThat(i.getEndTime(), notNullValue()));
 		finishItems.stream()
 				.filter(i -> ItemStatus.SKIPPED.name().equals(i.getStatus()))
-				.forEach(i -> assertThat(i.getIssue(), sameInstance(Launch.NOT_ISSUE)));
+				.forEach(i -> {
+					assertThat(i.getIssue(), notNullValue());
+					assertThat(i.getIssue().getIssueType(), equalTo(Launch.NOT_ISSUE.getIssueType()));
+				});
 
 		ArgumentCaptor<FinishTestItemRQ> finishSpecCaptor = ArgumentCaptor.forClass(FinishTestItemRQ.class);
 		verify(client).finishTestItem(eq(classId), finishSpecCaptor.capture());
