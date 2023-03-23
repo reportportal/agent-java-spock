@@ -21,9 +21,7 @@ import com.epam.reportportal.listeners.ItemType;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.ReportPortalSpockListener;
-import com.epam.reportportal.spock.features.fixtures.CleanupFixture;
 import com.epam.reportportal.spock.features.fixtures.CleanupSpecFixture;
-import com.epam.reportportal.spock.features.fixtures.SetupSpecFixture;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
@@ -31,13 +29,9 @@ import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.junit.runner.Result;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.mockito.ArgumentCaptor;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -50,6 +44,7 @@ import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
 
 public class TestCleanupSpecFixtureIntegrity {
+	private final String launchId = CommonUtils.namedId("launch_");
 	private final String classId = CommonUtils.namedId("class_");
 	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(2).collect(Collectors.toList());
 
@@ -57,16 +52,16 @@ public class TestCleanupSpecFixtureIntegrity {
 
 	@BeforeEach
 	public void setupMock() {
-		TestUtils.mockLaunch(client, null, classId, methodIds);
+		TestUtils.mockLaunch(client, launchId, classId, methodIds);
 		TestUtils.mockBatchLogging(client);
 		TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(client, standardParameters(), testExecutor()));
 	}
 
 	@Test
 	public void verify_spec_fixture_correct_reporting() {
-		Result result = runClasses(CleanupSpecFixture.class);
+		TestExecutionSummary result = runClasses(CleanupSpecFixture.class);
 
-		assertThat(result.getFailureCount(), equalTo(0));
+		assertThat(result.getTotalFailureCount(), equalTo(0L));
 
 		verify(client).startLaunch(any());
 		verify(client).startTestItem(any(StartTestItemRQ.class));
@@ -89,6 +84,7 @@ public class TestCleanupSpecFixtureIntegrity {
 		});
 
 		verify(client).finishTestItem(eq(classId), any());
+		verify(client).finishLaunch(eq(launchId), any());
 		verifyNoMoreInteractions(client);
 	}
 }

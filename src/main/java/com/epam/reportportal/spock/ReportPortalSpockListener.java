@@ -229,7 +229,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	@Nonnull
 	protected StartTestItemRQ buildIterationItemRq(@Nonnull IterationInfo iteration) {
-		StartTestItemRQ rq = buildBaseStartTestItemRq(iteration.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
+		StartTestItemRQ rq = buildBaseStartTestItemRq(iteration.getDisplayName(), ITEM_TYPES_REGISTRY.get(FEATURE));
 		rq.setDescription(buildIterationDescription(iteration));
 		MethodInfo featureMethodInfo = iteration.getFeature().getFeatureMethod();
 		String codeRef = extractCodeRef(featureMethodInfo);
@@ -244,6 +244,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		rq.setParameters(ParameterUtils.getParameters(codeRef,
 				IntStream.range(0, paramList.size()).mapToObj(i -> Pair.of(names.get(i), paramList.get(i))).collect(Collectors.toList())
 		));
+		setFeatureAttributes(rq, iteration.getFeature());
 		return rq;
 	}
 

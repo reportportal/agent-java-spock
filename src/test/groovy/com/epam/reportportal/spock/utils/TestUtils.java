@@ -32,8 +32,14 @@ import io.reactivex.Maybe;
 import okhttp3.MultipartBody;
 import okio.Buffer;
 import org.apache.commons.lang3.tuple.Pair;
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Result;
+import org.junit.platform.engine.discovery.ClassSelector;
+import org.junit.platform.engine.discovery.DiscoverySelectors;
+import org.junit.platform.launcher.Launcher;
+import org.junit.platform.launcher.LauncherDiscoveryRequest;
+import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
+import org.junit.platform.launcher.core.LauncherFactory;
+import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.mockito.stubbing.Answer;
 
 import javax.annotation.Nonnull;
@@ -42,7 +48,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.epam.reportportal.util.test.CommonUtils.generateUniqueId;
@@ -62,8 +67,22 @@ public class TestUtils {
 		});
 	}
 
-	public static Result runClasses(final Class<?>... testClasses) {
-		return JUnitCore.runClasses(testClasses);
+	public static TestExecutionSummary runClasses(final Class<?>... testClass) {
+		final List<ClassSelector> classSelectors = Arrays.stream(testClass)
+				.map(DiscoverySelectors::selectClass)
+				.collect(Collectors.toList());
+
+		final LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
+						.selectors(classSelectors)
+						.build();
+
+		final Launcher launcher = LauncherFactory.create();
+		final SummaryGeneratingListener listener = new SummaryGeneratingListener();
+
+		launcher.registerTestExecutionListeners(listener);
+		launcher.execute(request);
+
+		return listener.getSummary();
 	}
 
 	public static void mockLaunch(@Nonnull final ReportPortalClient client, @Nullable final String launchUuid,

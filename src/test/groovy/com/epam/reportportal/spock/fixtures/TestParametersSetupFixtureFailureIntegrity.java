@@ -31,7 +31,7 @@ import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.Result;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
@@ -46,6 +46,7 @@ import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
 
 public class TestParametersSetupFixtureFailureIntegrity {
+	private final String launchId = CommonUtils.namedId("launch_");
 	private final String classId = CommonUtils.namedId("class_");
 	private final String methodId = CommonUtils.namedId("method_");
 	private final List<String> nestedSteps = Stream.generate(() -> CommonUtils.namedId("method_")).limit(6).collect(Collectors.toList());
@@ -57,7 +58,7 @@ public class TestParametersSetupFixtureFailureIntegrity {
 
 	@BeforeEach
 	public void setupMock() {
-		TestUtils.mockLaunch(client, null, classId, methodId);
+		TestUtils.mockLaunch(client, launchId, classId, methodId);
 		TestUtils.mockNestedSteps(client, nestedStepsLink);
 		TestUtils.mockBatchLogging(client);
 		TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(client, standardParameters(), testExecutor()));
@@ -65,9 +66,9 @@ public class TestParametersSetupFixtureFailureIntegrity {
 
 	@Test
 	public void verify_setup_fixture_failure_correct_reporting_parameterized_feature() {
-		Result result = runClasses(SetupFixtureFailedParameters.class);
+		TestExecutionSummary result = runClasses(SetupFixtureFailedParameters.class);
 
-		assertThat(result.getFailureCount(), equalTo(3));
+		assertThat(result.getTotalFailureCount(), equalTo(1L));
 
 		verify(client).startLaunch(any());
 		verify(client).startTestItem(any(StartTestItemRQ.class));
@@ -113,6 +114,8 @@ public class TestParametersSetupFixtureFailureIntegrity {
 		assertThat(finishCaptor.getValue().getStatus(), equalTo(ItemStatus.FAILED.name()));
 
 		verify(client).finishTestItem(eq(classId), any());
+		verify(client).finishLaunch(eq(launchId), any());
+
 		//noinspection unchecked
 		verify(client, atLeastOnce()).log(any(List.class));
 		verifyNoMoreInteractions(client);

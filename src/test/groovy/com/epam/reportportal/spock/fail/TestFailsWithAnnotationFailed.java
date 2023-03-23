@@ -33,7 +33,7 @@ import com.epam.ta.reportportal.ws.model.log.SaveLogRQ;
 import okhttp3.MultipartBody;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.Result;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
@@ -49,6 +49,7 @@ import static org.mockito.Mockito.*;
 
 public class TestFailsWithAnnotationFailed {
 
+	private final String launchId = CommonUtils.namedId("launch_");
 	private final String classId = CommonUtils.namedId("class_");
 	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(2).collect(Collectors.toList());
 
@@ -56,7 +57,7 @@ public class TestFailsWithAnnotationFailed {
 
 	@BeforeEach
 	public void setupMock() {
-		TestUtils.mockLaunch(client, null, classId, methodIds);
+		TestUtils.mockLaunch(client, launchId, classId, methodIds);
 		TestUtils.mockBatchLogging(client);
 		TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(client, standardParameters(), testExecutor()));
 	}
@@ -64,9 +65,9 @@ public class TestFailsWithAnnotationFailed {
 	@Test
 	@SuppressWarnings("unchecked")
 	public void verify_fail_with_failed_reporting() {
-		Result result = runClasses(FailsWithAnnotationFail.class);
+		TestExecutionSummary result = runClasses(FailsWithAnnotationFail.class);
 
-		assertThat(result.getFailureCount(), equalTo(1));
+		assertThat(result.getTotalFailureCount(), equalTo(1L));
 
 		verify(client).startLaunch(any());
 		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
@@ -89,6 +90,7 @@ public class TestFailsWithAnnotationFailed {
 				.collect(Collectors.toList());
 		assertThat(finishItemStatuses, containsInAnyOrder(ItemStatus.PASSED.name(), ItemStatus.FAILED.name()));
 		verify(client).finishTestItem(eq(classId), any());
+		verify(client).finishLaunch(eq(launchId), any());
 
 		ArgumentCaptor<List<MultipartBody.Part>> logCaptor = ArgumentCaptor.forClass(List.class);
 		verify(client, atLeast(1)).log(logCaptor.capture());

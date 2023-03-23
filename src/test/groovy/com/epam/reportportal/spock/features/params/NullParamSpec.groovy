@@ -16,10 +16,11 @@
 
 package com.epam.reportportal.spock.features.params
 
-
+import spock.lang.Rollup
 import spock.lang.Specification
 
 class NullParamSpec extends Specification {
+    @Rollup
     def "length of Spock's and his friends' names"() {
         expect:
         (param == null) == value

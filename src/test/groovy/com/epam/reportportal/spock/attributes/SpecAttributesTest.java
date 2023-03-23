@@ -27,7 +27,7 @@ import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import com.epam.ta.reportportal.ws.model.attribute.ItemAttributesRQ;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.Result;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 
@@ -56,9 +56,9 @@ public class SpecAttributesTest {
 
 	@Test
 	public void verify_attribute_spec_level_declaration() {
-		Result result = runClasses(SpecAttributes.class);
+		TestExecutionSummary result = runClasses(SpecAttributes.class);
 
-		assertThat(result.getFailureCount(), equalTo(0));
+		assertThat(result.getTotalFailureCount(), equalTo(0L));
 
 		ArgumentCaptor<StartTestItemRQ> captor = ArgumentCaptor.forClass(StartTestItemRQ.class);
 		verify(client).startTestItem(captor.capture());

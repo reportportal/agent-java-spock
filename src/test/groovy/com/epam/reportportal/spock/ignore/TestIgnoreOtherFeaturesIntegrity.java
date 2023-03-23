@@ -29,7 +29,7 @@ import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.Result;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.mockito.ArgumentCaptor;
 
 import java.util.Collections;
@@ -45,57 +45,43 @@ import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
 
 public class TestIgnoreOtherFeaturesIntegrity {
+	private final String launchId = CommonUtils.namedId("launch_");
 	private final String classId = CommonUtils.namedId("class_");
-	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(3).collect(Collectors.toList());
+	private final String methodId = CommonUtils.namedId("method_");
 
 	private final ReportPortalClient client = mock(ReportPortalClient.class);
 
 	@BeforeEach
 	public void setupMock() {
-		TestUtils.mockLaunch(client, null, classId, methodIds);
+		TestUtils.mockLaunch(client, launchId, classId, methodId);
 		TestUtils.mockBatchLogging(client);
 		TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(client, standardParameters(), testExecutor()));
 	}
 
 	@Test
 	public void verify_ignored_feature_correct_reporting() {
-		Result result = runClasses(TestRestFeaturesIgnore.class);
+		//https://github.com/spockframework/spock/issues/1168 - skipped features or specs are not reported since spock 2.x
+		TestExecutionSummary result = runClasses(TestRestFeaturesIgnore.class);
 
-		assertThat(result.getFailureCount(), equalTo(0));
+		assertThat(result.getTotalFailureCount(), equalTo(0L));
 
 		verify(client).startLaunch(any());
 		verify(client).startTestItem(any(StartTestItemRQ.class));
 		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
-		verify(client, times(3)).startTestItem(same(classId), startCaptor.capture());
+		verify(client).startTestItem(same(classId), startCaptor.capture());
 
-		List<StartTestItemRQ> startItems = startCaptor.getAllValues();
-		List<String> stepTypes = startItems.stream().map(StartTestItemRQ::getType).collect(Collectors.toList());
-		assertThat(stepTypes, equalTo(Collections.nCopies(3, ItemType.STEP.name())));
+		StartTestItemRQ startItems = startCaptor.getValue();
+		assertThat(startItems.getType(), equalTo(ItemType.STEP.name()));
 
 		ArgumentCaptor<FinishTestItemRQ> finishCaptor = ArgumentCaptor.forClass(FinishTestItemRQ.class);
-		methodIds.forEach(id -> verify(client).finishTestItem(eq(id), finishCaptor.capture()));
+		verify(client).finishTestItem(eq(methodId), finishCaptor.capture());
 
-		List<FinishTestItemRQ> passedFeatures = finishCaptor.getAllValues()
-				.stream()
-				.filter(i -> ItemStatus.PASSED.name().equals(i.getStatus()))
-				.collect(Collectors.toList());
-		assertThat(passedFeatures, hasSize(1));
-		FinishTestItemRQ passedFeature = passedFeatures.get(0);
+		FinishTestItemRQ passedFeature = finishCaptor.getValue();
 		assertThat(passedFeature.getIssue(), nullValue());
 		assertThat(passedFeature.getEndTime(), notNullValue());
 
-		List<FinishTestItemRQ> ignoredFeatures = finishCaptor.getAllValues()
-				.stream()
-				.filter(i -> ItemStatus.SKIPPED.name().equals(i.getStatus()))
-				.collect(Collectors.toList());
-		assertThat(ignoredFeatures, hasSize(2));
-
-		ignoredFeatures.forEach(i -> {
-			assertThat(i.getIssue(), nullValue());
-			assertThat(i.getEndTime(), notNullValue());
-		});
-
 		verify(client).finishTestItem(eq(classId), any());
+		verify(client).finishLaunch(eq(launchId), any());
 		verifyNoMoreInteractions(client);
 	}
 }

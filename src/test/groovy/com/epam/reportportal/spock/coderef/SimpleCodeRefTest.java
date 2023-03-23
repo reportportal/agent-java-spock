@@ -20,16 +20,18 @@ import com.epam.reportportal.listeners.ItemType;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.ReportPortalSpockListener;
-import com.epam.reportportal.spock.features.HelloSpockSpec;
+import com.epam.reportportal.spock.features.HelloSpockSpecUnroll;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.apache.commons.lang3.tuple.Pair;
+import org.hamcrest.core.Every;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.Result;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.mockito.ArgumentCaptor;
+import org.mockito.internal.verification.VerificationModeFactory;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -63,26 +65,26 @@ public class SimpleCodeRefTest {
 
 	@Test
 	public void verify_static_test_code_reference_generation() {
-		Result result = runClasses(HelloSpockSpec.class);
+		TestExecutionSummary result = runClasses(HelloSpockSpecUnroll.class);
 
-		assertThat(result.getFailureCount(), equalTo(0));
+		assertThat(result.getTotalFailureCount(), equalTo(0L));
 
 		ArgumentCaptor<StartTestItemRQ> captor = ArgumentCaptor.forClass(StartTestItemRQ.class);
 		verify(client).startTestItem(captor.capture());
-		verify(client).startTestItem(same(classId), captor.capture());
+		verify(client, VerificationModeFactory.times(3)).startTestItem(same(classId), captor.capture());
 
 		List<StartTestItemRQ> items = captor.getAllValues();
-		assertThat(items, hasSize(2));
+		assertThat(items, hasSize(4));
 
 		StartTestItemRQ classRq = items.get(0);
-		StartTestItemRQ testRq = items.get(1);
+		List<StartTestItemRQ> testRq = items.subList(1, 4);
 
-		assertThat(classRq.getCodeRef(), allOf(notNullValue(), equalTo(HelloSpockSpec.class.getCanonicalName())));
+		assertThat(classRq.getCodeRef(), allOf(notNullValue(), equalTo(HelloSpockSpecUnroll.class.getCanonicalName())));
 		assertThat(classRq.getType(), allOf(notNullValue(), equalTo(ItemType.TEST.name())));
 		assertThat(
-				testRq.getCodeRef(),
-				allOf(notNullValue(), equalTo(HelloSpockSpec.class.getCanonicalName() + "." + HelloSpockSpec.TEST_NAME))
+				testRq.stream().map(StartTestItemRQ::getCodeRef).collect(Collectors.toList()),
+				Every.everyItem(allOf(notNullValue(), equalTo(HelloSpockSpecUnroll.class.getCanonicalName() + "." + HelloSpockSpecUnroll.TEST_NAME)))
 		);
-		assertThat(testRq.getType(), equalTo(ItemType.STEP.name()));
+		assertThat(testRq.stream().map(StartTestItemRQ::getType).collect(Collectors.toList()), Every.everyItem(equalTo(ItemType.STEP.name())));
 	}
 }

@@ -18,10 +18,8 @@ package com.epam.reportportal.spock.features.params
 
 
 import spock.lang.Specification
-import spock.lang.Unroll
 
 class NullParamSpecUnroll extends Specification {
-    @Unroll
     def "length of Spock's and his friends' names"() {
         expect:
         (param == null) == value
