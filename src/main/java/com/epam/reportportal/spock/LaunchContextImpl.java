@@ -120,6 +120,9 @@ class LaunchContextImpl extends AbstractLaunchContext {
 		while (value == null && specToFind != null) {
 			value = registry.get(getSpecIdentifier(specToFind));
 			specToFind = specToFind.getSubSpec();
+			if (specToFind != null) {
+				value = null;
+			}
 		}
 		return value;
 	}
