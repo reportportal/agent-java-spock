@@ -1,6 +1,11 @@
 # Changelog
 
 ## [Unreleased]
+### Fixed
+- Display name for iterations, by @AlexeyAkentyev
+- Inherited spec sent parent's test steps to the parent spec instead of inherited spec, by @AlexeyAkentyev
+### Changed
+- Client version updated on [5.1.17](https://github.com/reportportal/client-java/releases/tag/5.1.17), by @HardNorth
 
 ## [5.1.1]
 ### Changed

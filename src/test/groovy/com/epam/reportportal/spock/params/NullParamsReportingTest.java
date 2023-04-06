@@ -28,7 +28,7 @@ import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.Result;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
@@ -58,8 +58,8 @@ public class NullParamsReportingTest {
 
 	@Test
 	public void verify_null_parameter_reporting() {
-		Result result = runClasses(NullParamSpecUnroll.class);
-		assertThat(result.getFailureCount(), equalTo(0));
+		TestExecutionSummary result = runClasses(NullParamSpecUnroll.class);
+		assertThat(result.getTotalFailureCount(), equalTo(0L));
 
 		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
 		verify(client, timeout(2000).times(2)).startTestItem(same(classId), startCaptor.capture());

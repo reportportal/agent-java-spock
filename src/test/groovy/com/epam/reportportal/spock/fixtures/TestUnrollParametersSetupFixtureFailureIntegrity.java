@@ -30,7 +30,7 @@ import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.Result;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
@@ -45,6 +45,7 @@ import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
 
 public class TestUnrollParametersSetupFixtureFailureIntegrity {
+	private final String launchId = CommonUtils.namedId("launch_");
 	private final String classId = CommonUtils.namedId("class_");
 	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_"))
 			.limit(6)
@@ -54,7 +55,7 @@ public class TestUnrollParametersSetupFixtureFailureIntegrity {
 
 	@BeforeEach
 	public void setupMock() {
-		TestUtils.mockLaunch(client, null, classId, methodIds);
+		TestUtils.mockLaunch(client, launchId, classId, methodIds);
 		TestUtils.mockBatchLogging(client);
 		TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(
 				client,
@@ -65,9 +66,9 @@ public class TestUnrollParametersSetupFixtureFailureIntegrity {
 
 	@Test
 	public void verify_setup_fixture_failure_correct_reporting_unrolled_feature() {
-		Result result = runClasses(SetupFixtureFailedParametersUnroll.class);
+		TestExecutionSummary result = runClasses(SetupFixtureFailedParametersUnroll.class);
 
-		assertThat(result.getFailureCount(), equalTo(3));
+		assertThat(result.getTotalFailureCount(), equalTo(3L));
 
 		verify(client).startLaunch(any());
 		verify(client).startTestItem(any(StartTestItemRQ.class));
@@ -103,6 +104,7 @@ public class TestUnrollParametersSetupFixtureFailureIntegrity {
 		});
 
 		verify(client).finishTestItem(eq(classId), any());
+		verify(client).finishLaunch(eq(launchId), any());
 		//noinspection unchecked
 		verify(client, atLeastOnce()).log(any(List.class));
 		verifyNoMoreInteractions(client);

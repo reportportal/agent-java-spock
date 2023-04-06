@@ -31,7 +31,7 @@ import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.Result;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
@@ -67,9 +67,9 @@ public class ThreeNestedStepsOneFailedTest {
 
 	@Test
 	public void verify_one_failed_nested_step_reporting() {
-		Result result = runClasses(HelloSpockSpecFailed.class);
+		TestExecutionSummary result = runClasses(HelloSpockSpecFailed.class);
 
-		assertThat(result.getFailureCount(), equalTo(1));
+		assertThat(result.getTotalFailureCount(), equalTo(1L));
 
 		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
 		verify(client).startTestItem(any(StartTestItemRQ.class));

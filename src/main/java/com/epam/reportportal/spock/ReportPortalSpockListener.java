@@ -43,6 +43,7 @@ import org.spockframework.runtime.model.*;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.Supplier;
@@ -229,7 +230,26 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	@Nonnull
 	protected StartTestItemRQ buildIterationItemRq(@Nonnull IterationInfo iteration) {
-		StartTestItemRQ rq = buildBaseStartTestItemRq(iteration.getName(), ITEM_TYPES_REGISTRY.get(FEATURE));
+		Method[] iterationMethods = iteration.getClass().getMethods();
+		Method displayNameMethod = Arrays.stream(iterationMethods)
+				.filter(m -> "getDisplayName".equals(m.getName()))
+				.findAny()
+				.orElseGet(
+						() -> Arrays.stream(iterationMethods)
+								.filter(m -> "getName".equals(m.getName()))
+								.findAny()
+								.orElse(null)
+				);
+		if (displayNameMethod == null) {
+			throw new IllegalStateException("Unknown Spock version.");
+		}
+		String displayName;
+		try {
+			displayName = (String) displayNameMethod.invoke(iteration);
+		} catch (InvocationTargetException | IllegalAccessException e) {
+			throw new IllegalStateException(e);
+		}
+		StartTestItemRQ rq = buildBaseStartTestItemRq(displayName, ITEM_TYPES_REGISTRY.get(FEATURE));
 		rq.setDescription(buildIterationDescription(iteration));
 		MethodInfo featureMethodInfo = iteration.getFeature().getFeatureMethod();
 		String codeRef = extractCodeRef(featureMethodInfo);
@@ -244,6 +264,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		rq.setParameters(ParameterUtils.getParameters(codeRef,
 				IntStream.range(0, paramList.size()).mapToObj(i -> Pair.of(names.get(i), paramList.get(i))).collect(Collectors.toList())
 		));
+		setFeatureAttributes(rq, iteration.getFeature());
 		return rq;
 	}
 
@@ -296,6 +317,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		if (SKIPPED == status) {
 			rq.setIssue(Launch.NOT_ISSUE);
 		}
+		//noinspection ReactiveStreamsUnusedPublisher
 		launch.get().finishTestItem(footprint.getId(), rq);
 		footprint.markAsPublished();
 	}
@@ -323,6 +345,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		if (SKIPPED == status) {
 			rq.setIssue(Launch.NOT_ISSUE);
 		}
+		//noinspection ReactiveStreamsUnusedPublisher
 		launch.get().finishTestItem(itemId, rq);
 		footprint.markAsPublished();
 	}
@@ -330,6 +353,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	protected void reportTestItemFinish(@Nonnull ReportableItemFootprint<?> footprint) {
 		Maybe<String> itemId = footprint.getId();
 		FinishTestItemRQ rq = buildFinishTestItemRq(itemId, footprint.getStatus().orElse(ItemStatus.PASSED));
+		//noinspection ReactiveStreamsUnusedPublisher
 		launch.get().finishTestItem(itemId, rq);
 		footprint.markAsPublished();
 	}
@@ -372,7 +396,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	}
 
 	public void reportFixtureError(@Nonnull SpecInfo spec, @Nullable FeatureInfo feature, @Nullable IterationInfo iteration,
-			@Nonnull ErrorInfo error) {
+								   @Nonnull ErrorInfo error) {
 		MethodInfo method = error.getMethod();
 		NodeFootprint<?> ownerFootprint = findFixtureOwner(spec, feature, iteration, error.getMethod());
 		MethodKind kind = method.getKind();
@@ -483,7 +507,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	@SuppressWarnings("rawtypes")
 	protected NodeFootprint<? extends NodeInfo> findFixtureOwner(SpecInfo spec, FeatureInfo feature, IterationInfo iteration,
-			MethodInfo fixture) {
+																 MethodInfo fixture) {
 		MethodKind kind = fixture.getKind();
 		if (kind.isSpecScopedFixtureMethod()) {
 			return launchContext.findSpecFootprint(spec);
