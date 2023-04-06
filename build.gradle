@@ -65,7 +65,9 @@ dependencies {
 
 test {
     outputs.upToDateWhen { return false }
-    useJUnitPlatform()
+    useJUnitPlatform {
+        includeEngines 'junit-jupiter'
+    }
     maxParallelForks(5) // it's forks - separate JVMs, should not interfere each other
     forkEvery(1)
     doFirst {

@@ -26,7 +26,7 @@ import com.epam.reportportal.util.test.CommonUtils;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.Result;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 
 import static com.epam.reportportal.spock.utils.TestUtils.*;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -36,6 +36,7 @@ import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.*;
 
 public class TestNoNestedStepsWhenNoParameters {
+	private final String launchId = CommonUtils.namedId("launch_");
 	private final String classId = CommonUtils.namedId("class_");
 	private final String methodId = CommonUtils.namedId("method_");
 
@@ -43,16 +44,16 @@ public class TestNoNestedStepsWhenNoParameters {
 
 	@BeforeEach
 	public void setupMock() {
-		TestUtils.mockLaunch(client, null, classId, methodId);
+		TestUtils.mockLaunch(client, launchId, classId, methodId);
 		TestUtils.mockBatchLogging(client);
 		TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(client, standardParameters(), testExecutor()));
 	}
 
 	@Test
 	public void verify_no_nested_steps_reported() {
-		Result result = runClasses(OrderedInteractionsSpec.class);
+		TestExecutionSummary result = runClasses(OrderedInteractionsSpec.class);
 
-		assertThat(result.getFailureCount(), equalTo(0));
+		assertThat(result.getTotalFailureCount(), equalTo(0L));
 
 		verify(client).startLaunch(any());
 		verify(client).startTestItem(any(StartTestItemRQ.class));
@@ -60,6 +61,7 @@ public class TestNoNestedStepsWhenNoParameters {
 
 		verify(client).finishTestItem(eq(methodId), any());
 		verify(client).finishTestItem(eq(classId), any());
+		verify(client).finishLaunch(eq(launchId), any());
 		verifyNoMoreInteractions(client);
 	}
 }

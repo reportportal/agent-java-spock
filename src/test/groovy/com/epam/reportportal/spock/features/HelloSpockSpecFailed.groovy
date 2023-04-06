@@ -16,10 +16,11 @@
 
 package com.epam.reportportal.spock.features
 
-
+import spock.lang.Rollup
 import spock.lang.Specification
 
 class HelloSpockSpecFailed extends Specification {
+    @Rollup
     def "length of Spock's and his friends' names failed"() {
         expect:
         name.size() == length

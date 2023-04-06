@@ -26,7 +26,7 @@ import com.epam.reportportal.util.test.CommonUtils;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.Result;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 
@@ -54,9 +54,9 @@ public class PlainTestCaseIdAnnotationTest {
 
 	@Test
 	public void verify_test_case_id_set_by_annotation() {
-		Result result = runClasses(PlainTestCaseId.class);
+		TestExecutionSummary result = runClasses(PlainTestCaseId.class);
 
-		assertThat(result.getFailureCount(), equalTo(0));
+		assertThat(result.getTotalFailureCount(), equalTo(0L));
 
 		ArgumentCaptor<StartTestItemRQ> captor = ArgumentCaptor.forClass(StartTestItemRQ.class);
 		verify(client).startTestItem(ArgumentMatchers.any());

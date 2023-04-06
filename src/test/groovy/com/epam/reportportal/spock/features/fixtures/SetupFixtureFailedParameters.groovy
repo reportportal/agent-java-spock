@@ -16,6 +16,7 @@
 
 package com.epam.reportportal.spock.features.fixtures
 
+import spock.lang.Rollup
 import spock.lang.Specification
 
 class SetupFixtureFailedParameters extends Specification {
@@ -24,6 +25,7 @@ class SetupFixtureFailedParameters extends Specification {
         throw new IllegalStateException("Fail!")
     }
 
+    @Rollup
     def "length of Spock's and his friends' names"() {
         expect:
         name.size() == length

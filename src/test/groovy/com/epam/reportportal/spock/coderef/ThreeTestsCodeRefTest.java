@@ -27,7 +27,7 @@ import com.epam.reportportal.util.test.CommonUtils;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.Result;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
@@ -57,9 +57,9 @@ public class ThreeTestsCodeRefTest {
 
 	@Test
 	public void verify_static_test_code_reference_generation() {
-		Result result = runClasses(HelloSpockSpecUnroll.class);
+		TestExecutionSummary result = runClasses(HelloSpockSpecUnroll.class);
 
-		assertThat(result.getFailureCount(), equalTo(0));
+		assertThat(result.getTotalFailureCount(), equalTo(0L));
 
 		verify(client).startTestItem(any());
 		ArgumentCaptor<StartTestItemRQ> captor = ArgumentCaptor.forClass(StartTestItemRQ.class);

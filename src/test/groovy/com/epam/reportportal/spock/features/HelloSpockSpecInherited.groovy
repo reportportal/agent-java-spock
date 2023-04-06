@@ -14,19 +14,14 @@
  * limitations under the License.
  */
 
-package com.epam.reportportal.spock.features.params
+package com.epam.reportportal.spock.features
 
+class HelloSpockSpecInherited extends HelloSpockSpecUnroll {
+    public static final String INHERITED_TEST_NAME = "simple test"
 
-import spock.lang.Specification
-
-class NullParamSpecUnroll extends Specification {
-    def "length of Spock's and his friends' names"() {
+    def "simple test"() {
         expect:
-        (param == null) == value
-
-        where:
-        param  | value
-        null   | true
-        "Kirk" | false
+        //noinspection GroovyPointlessBoolean
+        true == true
     }
 }

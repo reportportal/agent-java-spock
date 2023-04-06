@@ -18,7 +18,6 @@ package com.epam.reportportal.spock.features.fixtures
 
 
 import spock.lang.Specification
-import spock.lang.Unroll
 
 class SetupSpecFixtureFailedParametersUnroll extends Specification {
 
@@ -26,7 +25,6 @@ class SetupSpecFixtureFailedParametersUnroll extends Specification {
         throw new IllegalStateException("Fail!")
     }
 
-    @Unroll
     def "length of Spock's and his friends' names"() {
         expect:
         name.size() == length

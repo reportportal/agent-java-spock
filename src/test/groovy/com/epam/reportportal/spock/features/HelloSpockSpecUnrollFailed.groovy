@@ -18,11 +18,9 @@ package com.epam.reportportal.spock.features
 
 
 import spock.lang.Specification
-import spock.lang.Unroll
 
 class HelloSpockSpecUnrollFailed extends Specification {
 
-    @Unroll
     def "length of Spock's and his friends' names failed"() {
         expect:
         name.size() == length
