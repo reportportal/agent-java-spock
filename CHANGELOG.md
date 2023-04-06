@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [5.1.2]
 ### Fixed
 - Display name for iterations, by @AlexeyAkentyev
 - Inherited spec sent parent's test steps to the parent spec instead of inherited spec, by @AlexeyAkentyev
