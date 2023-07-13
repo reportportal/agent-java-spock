@@ -64,8 +64,19 @@ import static org.spockframework.runtime.model.MethodKind.*;
  * The best approach is to have only one instance
  */
 public class ReportPortalSpockListener extends AbstractRunListener {
-
 	private static final Logger LOGGER = LoggerFactory.getLogger(ReportPortalSpockListener.class);
+
+	private static final Method[] ITERATION_METHODS = IterationInfo.class.getMethods();
+	private static final Method DISPLAY_NAME_METHOD = Arrays.stream(ITERATION_METHODS)
+			.filter(m -> "getDisplayName".equals(m.getName()))
+			.findAny()
+			.orElseGet(
+					() -> Arrays.stream(ITERATION_METHODS)
+							.filter(m -> "getName".equals(m.getName()))
+							.findAny()
+							.orElseThrow(() -> new IllegalStateException("Unknown Spock version."))
+			);
+
 	private final MemoizingSupplier<Launch> launch;
 
 	// stores the bindings of Spock method kinds to the RP-specific notation
@@ -230,22 +241,9 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	@Nonnull
 	protected StartTestItemRQ buildIterationItemRq(@Nonnull IterationInfo iteration) {
-		Method[] iterationMethods = iteration.getClass().getMethods();
-		Method displayNameMethod = Arrays.stream(iterationMethods)
-				.filter(m -> "getDisplayName".equals(m.getName()))
-				.findAny()
-				.orElseGet(
-						() -> Arrays.stream(iterationMethods)
-								.filter(m -> "getName".equals(m.getName()))
-								.findAny()
-								.orElse(null)
-				);
-		if (displayNameMethod == null) {
-			throw new IllegalStateException("Unknown Spock version.");
-		}
 		String displayName;
 		try {
-			displayName = (String) displayNameMethod.invoke(iteration);
+			displayName = (String) DISPLAY_NAME_METHOD.invoke(iteration);
 		} catch (InvocationTargetException | IllegalAccessException e) {
 			throw new IllegalStateException(e);
 		}
