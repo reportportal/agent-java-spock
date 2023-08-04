@@ -4,12 +4,14 @@
 > after a successful launch start. This information might help us to improve both ReportPortal backend and client sides. It is used by the
 > ReportPortal team only and is not supposed for sharing with 3rd parties.
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.epam.reportportal/agent-java-spock.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22agent-java-spock%22)
+[![Maven Central](https://img.shields.io/maven-central/v/com.epam.reportportal/agent-java-spock.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/com.epam.reportportal/agent-java-spock)
 [![CI Build](https://github.com/reportportal/agent-java-spock/actions/workflows/ci.yml/badge.svg)](https://github.com/reportportal/agent-java-spock/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/reportportal/agent-java-spock/branch/develop/graph/badge.svg?token=Vnk338Rigx)](https://codecov.io/gh/reportportal/agent-java-spock)
 [![Join Slack chat!](https://slack.epmrpp.reportportal.io/badge.svg)](https://slack.epmrpp.reportportal.io/)
 [![stackoverflow](https://img.shields.io/badge/reportportal-stackoverflow-orange.svg?style=flat)](http://stackoverflow.com/questions/tagged/reportportal)
 [![Build with Love](https://img.shields.io/badge/build%20with-❤%EF%B8%8F%E2%80%8D-lightgrey.svg)](http://reportportal.io?style=flat)
+
+The latest version: $LATEST_VERSION. Please use `Maven Central` link above to get the client.
 
 ## Video Tutorial for integration of SPOCK on Groovy
 [![Spock on Groovy](https://img.youtube.com/vi/Rkm8dpTZur8/0.jpg)](https://www.youtube.com/watch?v=Rkm8dpTZur8)
