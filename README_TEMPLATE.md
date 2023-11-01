@@ -95,7 +95,7 @@ testCompile "org.codehaus.groovy:groovy-all:$groovyVersion"
 ```
 *Spock framework dependency*
 ```gradle
-testCompile ("org.spockframework:spock-core:1.3-groovy-2.5") {
+testCompile ("org.spockframework:spock-core:2.3-groovy-2.5") {
     exclude group: "org.codehaus.groovy"
 }
 ```
@@ -107,28 +107,28 @@ If you prefer using *Logback* logging library, add following dependencies:
 
 *ReportPortal logback logger dependency*
 ```gradle
-testCompile 'com.epam.reportportal:logger-java-logback:5.1.1'
+testCompile 'com.epam.reportportal:logger-java-logback:5.1.6'
 ```
 
 > Up to date version could be found [here](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22logger-java-logback%22)
 
 *The logback itself*
 ```gradle
-compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.10'
+compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.3.8'
 ```
 
 If you prefer using *Log4j* logging library, add following dependencies:
 
 *ReportPortal log4j logger dependency*
 ```gradle
-testCompile 'com.epam.reportportal:logger-java-log4j:5.1.4'
+testCompile 'com.epam.reportportal:logger-java-log4j:5.1.8'
 ```
 > Up to date version could be found [here](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22logger-java-log4j%22)
 
 *The log4j itself*
 ```gradle
-compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.17.1'
-compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.17.1'
+compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.17.2'
+compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.17.2'
 ```
 
 #### 2.4 Create gradle tasks for tests
@@ -182,14 +182,14 @@ repositories {
 
 dependencies {
     testCompile 'com.epam.reportportal:agent-java-spock:$LATEST_VERSION'
-    testCompile 'com.epam.reportportal:logger-java-logback:5.1.1'
+    testCompile 'com.epam.reportportal:logger-java-logback:5.1.6'
 
     testCompile "org.seleniumhq.selenium:selenium-support:$seleniumVersion"
     testCompile "org.gebish:geb-spock:$gebVersion"
     testCompile "org.gebish:geb-junit4:$gebVersion"
     testCompile "org.codehaus.groovy:groovy-all:$groovyVersion"
 
-    testCompile ("org.spockframework:spock-core:1.3-groovy-2.5") {
+    testCompile ("org.spockframework:spock-core:2.3-groovy-2.5") {
         exclude group: "org.codehaus.groovy"
     }
 
@@ -197,7 +197,7 @@ dependencies {
     testCompile "org.seleniumhq.selenium:selenium-firefox-driver:$seleniumVersion"
     testCompile "org.seleniumhq.selenium:selenium-ie-driver:$seleniumVersion"
 
-    compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.10'
+    compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.3.8'
 }
 
 drivers.each { driver ->
@@ -434,7 +434,7 @@ Returning back to the code. In your project, create file named `reportportal.pro
 [resources/reportportal.properties]
 
 rp.endpoint = http://localhost:8080
-rp.uuid = your_reportportal_api_key
+rp.api.key = your_reportportal_api_key
 rp.launch = robin_tests
 rp.project = my_cool_project
 rp.enable = true
@@ -630,6 +630,6 @@ reportingListener = new RpScreenshotListener()
 
 Now we should be able to see the screenshot of the page after opening Google's start page and also in case of the test failure
 
-![Attahced screenshot to the ReportPortal logs](integration_manual_files/step_attached_screenshot_1.png)
+![Attached screenshot to the ReportPortal logs](integration_manual_files/step_attached_screenshot_1.png)
 
 ![Opened screenshot from the ReportPortal logs](integration_manual_files/step_attached_screenshot_2.png)
