@@ -32,7 +32,7 @@ import static java.lang.Boolean.TRUE;
  *
  * @author Dzmitry Mikhievich
  */
-abstract class AbstractLaunchContext {
+public abstract class AbstractLaunchContext {
 
 	private Maybe<String> launchId;
 	private final AtomicReference<Boolean> launchInProgress = new AtomicReference<>();
