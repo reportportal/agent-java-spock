@@ -29,7 +29,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  *
  * @author Dzmitry Mikhievich
  */
-abstract class ReportableItemFootprint<T extends NodeInfo> {
+public abstract class ReportableItemFootprint<T extends NodeInfo> {
 
 	static final Predicate<ReportableItemFootprint> IS_NOT_PUBLISHED = input -> input != null && !input.isPublished();
 

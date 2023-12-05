@@ -32,7 +32,7 @@ import static com.google.common.collect.Lists.newArrayListWithCapacity;
  *
  * @author Dzmitry Mikhievich
  */
-abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFootprint<T> {
+public abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFootprint<T> {
 
 	/*
 	 * Approximate fixtures count, which should match most cases. This is

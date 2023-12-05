@@ -429,7 +429,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	protected void logError(@Nonnull ErrorInfo error) {
 		Throwable exception = error.getException();
-		LoggerFactory.getLogger(error.getMethod().getReflection().getDeclaringClass()).error(exception.getLocalizedMessage(), exception);
+		ReportPortal.sendStackTraceToRP(exception);
 	}
 
 	public void reportError(@Nonnull ErrorInfo error) {

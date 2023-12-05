@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 EPAM Systems
+ * Copyright 2023 EPAM Systems
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,22 @@
  * limitations under the License.
  */
 
-package com.epam.reportportal.spock.features
+package com.epam.reportportal.spock.features.fail
 
-
+import spock.lang.FailsWith
 import spock.lang.Specification
-import spock.lang.Unroll
 
-class HelloSpockSpecUnroll extends Specification {
-    public static final String TEST_NAME = "length of Spock's and his friends' names"
+class FailsWithAnnotationFail extends Specification {
 
-    @Unroll
-    def "length of Spock's and his friends' names"() {
+    @FailsWith(IllegalArgumentException.class)
+    def "simple test 1"() {
         expect:
-        name.size() == length
+        throw new IllegalStateException("Fail!")
+    }
 
-        where:
-        name     | length
-        "Spock"  | 5
-        "Kirk"   | 4
-        "Scotty" | 6
+    def "simple test 2"() {
+        expect:
+        //noinspection GroovyPointlessBoolean
+        true == true
     }
 }

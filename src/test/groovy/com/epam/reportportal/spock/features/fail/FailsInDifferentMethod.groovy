@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 EPAM Systems
+ * Copyright 2023 EPAM Systems
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-package com.epam.reportportal.spock.features
+package com.epam.reportportal.spock.features.fail
 
-import spock.lang.Rollup
 import spock.lang.Specification
 
-class HelloSpockSpecFailed extends Specification {
-    @Rollup
-    def "length of Spock's and his friends' names failed"() {
-        expect:
-        name.size() == length
+class FailsInDifferentMethod extends Specification {
 
-        where:
-        name     | length
-        "Spock"  | 5
-        "Kirk"   | 4
-        "Scotty" | 7 // failed case
+    def anotherFailedMethod() {
+        throw new IllegalStateException("Some test flow failure")
+    }
+
+    def failedMethod() {
+        anotherFailedMethod()
+    }
+
+    def "failing test 1"() {
+        given:
+        failedMethod()
     }
 }

@@ -22,7 +22,7 @@ import com.epam.reportportal.listeners.LogLevel;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.spock.ReportPortalSpockListener;
-import com.epam.reportportal.spock.features.fail.FailsWithAnnotationFail;
+import com.epam.reportportal.spock.features.fail.FailsInDifferentMethod;
 import com.epam.reportportal.spock.utils.TestExtension;
 import com.epam.reportportal.spock.utils.TestUtils;
 import com.epam.reportportal.util.test.CommonUtils;
@@ -47,11 +47,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-public class TestFailsWithAnnotationFailed {
+public class TestFailsWithStackTrace {
 
 	private final String launchId = CommonUtils.namedId("launch_");
 	private final String classId = CommonUtils.namedId("class_");
-	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(2).collect(Collectors.toList());
+	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(1).collect(Collectors.toList());
 
 	private final ReportPortalClient client = mock(ReportPortalClient.class);
 
@@ -65,14 +65,14 @@ public class TestFailsWithAnnotationFailed {
 	@Test
 	@SuppressWarnings("unchecked")
 	public void verify_fail_with_failed_reporting() {
-		TestExecutionSummary result = runClasses(FailsWithAnnotationFail.class);
+		TestExecutionSummary result = runClasses(FailsInDifferentMethod.class);
 
 		assertThat(result.getTotalFailureCount(), equalTo(1L));
 
 		verify(client).startLaunch(any());
 		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
 		verify(client).startTestItem(any(StartTestItemRQ.class));
-		verify(client, times(2)).startTestItem(same(classId), startCaptor.capture());
+		verify(client, times(1)).startTestItem(same(classId), startCaptor.capture());
 
 		List<StartTestItemRQ> items = startCaptor.getAllValues();
 
@@ -88,7 +88,9 @@ public class TestFailsWithAnnotationFailed {
 				.stream()
 				.map(FinishExecutionRQ::getStatus)
 				.collect(Collectors.toList());
-		assertThat(finishItemStatuses, containsInAnyOrder(ItemStatus.PASSED.name(), ItemStatus.FAILED.name()));
+
+		assertThat(finishItemStatuses, hasSize(1));
+		assertThat(finishItemStatuses.get(0), equalTo(ItemStatus.FAILED.name()));
 		verify(client).finishTestItem(eq(classId), any());
 		verify(client).finishLaunch(eq(launchId), any());
 
@@ -98,6 +100,7 @@ public class TestFailsWithAnnotationFailed {
 				.filter(rq -> LogLevel.ERROR.name().equals(rq.getLevel()))
 				.collect(Collectors.toList());
 		assertThat(rqs, hasSize(1));
+		assertThat(rqs.get(0).getMessage(), containsString("FailsInDifferentMethod.anotherFailedMethod"));
 
 		//noinspection unchecked
 		verify(client, atLeast(1)).log(any(List.class));
