@@ -436,9 +436,12 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		MethodInfo method = error.getMethod();
 		MethodKind kind = error.getMethod().getKind();
 		if (FEATURE == kind || FEATURE_EXECUTION == kind) {
-			ofNullable(launchContext.findFeatureFootprint(method.getFeature())).ifPresent(f -> f.setStatus(FAILED));
-			ofNullable(launchContext.getRuntimePointerForSpec(method.getParent())
-					.getCurrentIteration()).map(launchContext::findIterationFootprint).ifPresent(i -> i.setStatus(FAILED));
+			if(method.getFeature().isReportIterations()) {
+				ofNullable(launchContext.getRuntimePointerForSpec(method.getParent())
+						.getCurrentIteration()).map(launchContext::findIterationFootprint).ifPresent(i -> i.setStatus(FAILED));
+			} else {
+				ofNullable(launchContext.findFeatureFootprint(method.getFeature())).ifPresent(f -> f.setStatus(FAILED));
+			}
 			logError(error);
 		} else if (ITERATION_EXECUTION == kind) {
 			ofNullable(launchContext.findIterationFootprint(method.getIteration())).ifPresent(i -> i.setStatus(FAILED));
