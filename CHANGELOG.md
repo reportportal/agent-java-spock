@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Changed
+- Client version updated on [5.1.24](https://github.com/reportportal/client-java/releases/tag/5.1.24), by @HardNorth
+- `ReportPortalSpockListener.logError` now sends exceptions directly to RP bypassing logging to reduce amount of user misconfigurations, by @HardNorth
 
 ## [5.1.3]
 ### Changed
