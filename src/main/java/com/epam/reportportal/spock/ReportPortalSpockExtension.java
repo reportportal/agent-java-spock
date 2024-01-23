@@ -35,6 +35,7 @@ public class ReportPortalSpockExtension implements IGlobalExtension {
 		reportingRunListener = listener;
 	}
 
+	@SuppressWarnings("unused")
 	public ReportPortalSpockExtension() {
 		this(new ReportPortalSpockListener());
 	}
@@ -42,6 +43,7 @@ public class ReportPortalSpockExtension implements IGlobalExtension {
 	@Override
 	public void start() {
 		LOGGER.info("\"LAUNCHING\" the test run");
+		//noinspection ReactiveStreamsUnusedPublisher
 		reportingRunListener.startLaunch();
 	}
 

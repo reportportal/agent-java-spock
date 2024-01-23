@@ -27,7 +27,7 @@ public class SystemAttributesFetcher {
 	private static final String PROPS_FILE = "agent.properties";
 
 	private SystemAttributesFetcher() {
-		// static only
+		throw new RuntimeException("No instances should exist for the class!");
 	}
 
 	private static ItemAttributesRQ skippedIssue(Boolean skippedAnIssue) {

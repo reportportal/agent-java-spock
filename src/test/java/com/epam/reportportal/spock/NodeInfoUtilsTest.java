@@ -15,7 +15,6 @@
  */
 package com.epam.reportportal.spock;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -114,6 +113,7 @@ public class NodeInfoUtilsTest {
 		when(inheritedFixtureInfo.getName()).thenReturn(inheritedFixtureName);
 		SpecInfo parent = mock(SpecInfo.class);
 		when(inheritedFixtureInfo.getParent()).thenReturn(parent);
+		//noinspection rawtypes
 		when(parent.getReflection()).thenReturn(((Class) FixtureSource.class));
 		String expectedInheritedName = format(INHERITED_FIXTURE_NAME_TEMPLATE, FixtureSource.class.getSimpleName(), inheritedFixtureName);
 
@@ -137,6 +137,7 @@ public class NodeInfoUtilsTest {
 	public void getSpecIdentifier_specInfoIsNotNull() {
 		Class<?> bearingClass = getClass();
 		SpecInfo specInfoMock = mock(SpecInfo.class);
+		//noinspection rawtypes
 		when((Class) specInfoMock.getReflection()).thenReturn(bearingClass);
 
 		String identifier = NodeInfoUtils.getSpecIdentifier(specInfoMock);
@@ -154,7 +155,7 @@ public class NodeInfoUtilsTest {
 	}
 
 	private static Collection<String> generateBlockTexts(int count) {
-		Collection<String> texts = Lists.newArrayListWithCapacity(count);
+		Collection<String> texts = new ArrayList<>();
 		for (int i = 0; i < count; i++) {
 			texts.add(RandomStringUtils.randomAlphabetic(40));
 		}

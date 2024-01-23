@@ -19,12 +19,12 @@ import io.reactivex.Maybe;
 import org.spockframework.runtime.model.MethodInfo;
 import org.spockframework.runtime.model.NodeInfo;
 
+import javax.annotation.Nonnull;
+import java.lang.reflect.AnnotatedElement;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.Predicate;
-
-import static com.google.common.collect.Lists.newArrayList;
-import static com.google.common.collect.Lists.newArrayListWithCapacity;
 
 /**
  * Abstract entity for the representation of the metadata for the reportable
@@ -32,25 +32,12 @@ import static com.google.common.collect.Lists.newArrayListWithCapacity;
  *
  * @author Dzmitry Mikhievich
  */
-public abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFootprint<T> {
-
-	/*
-	 * Approximate fixtures count, which should match most cases. This is
-	 * a kind of "happy medium" between memory consumption and potential
-	 * performance drawback on arrays coping
-	 */
-	private static final int APPROXIMATE_CAPACITY = 4;
-
+public abstract class NodeFootprint<T extends NodeInfo<?, ? extends AnnotatedElement>> extends ReportableItemFootprint<T> {
 	private final List<ReportableItemFootprint<MethodInfo>> fixtures;
 
-	NodeFootprint(T nodeInfo, Maybe<String> id) {
+	NodeFootprint(@Nonnull T nodeInfo, Maybe<String> id) {
 		super(nodeInfo, id);
-		fixtures = newArrayListWithCapacity(APPROXIMATE_CAPACITY);
-	}
-
-	ReportableItemFootprint<MethodInfo> findFixtureFootprint(final MethodInfo fixture) {
-		Predicate<ReportableItemFootprint<MethodInfo>> criteria = createFixtureMatchPredicate(fixture);
-		return  getFixtures().stream().filter(criteria).findAny().orElseThrow(NoSuchElementException::new);
+		fixtures = new ArrayList<>();
 	}
 
 	/**
@@ -70,7 +57,7 @@ public abstract class NodeFootprint<T extends NodeInfo> extends ReportableItemFo
 	}
 
 	List<ReportableItemFootprint<MethodInfo>> getFixtures() {
-		return newArrayList(fixtures);
+		return new ArrayList<>(fixtures);
 	}
 
 	private static Predicate<ReportableItemFootprint<MethodInfo>> createFixtureMatchPredicate(final MethodInfo fixture) {

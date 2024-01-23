@@ -39,7 +39,7 @@ import static org.spockframework.runtime.model.BlockKind.WHERE;
  */
 final class NodeInfoUtils {
 	static final String INHERITED_FIXTURE_NAME_TEMPLATE = "%s:%s";
-	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
+	private static final String LINE_SEPARATOR = System.lineSeparator();
 	private static final String BLOCK_SPLITTER = ": ";
 	private static final String CONJUNCTION_KEYWORD = "And";
 
