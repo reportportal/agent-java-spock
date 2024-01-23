@@ -19,16 +19,16 @@ import com.epam.reportportal.listeners.ItemStatus;
 import io.reactivex.Maybe;
 import org.spockframework.runtime.model.NodeInfo;
 
+import javax.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.Predicate;
-
-import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * Base entity which stores the reporting metadata for the <i>Spock</i> test elements
  *
  * @author Dzmitry Mikhievich
  */
+@SuppressWarnings("rawtypes")
 public abstract class ReportableItemFootprint<T extends NodeInfo> {
 
 	static final Predicate<ReportableItemFootprint> IS_NOT_PUBLISHED = input -> input != null && !input.isPublished();
@@ -39,8 +39,7 @@ public abstract class ReportableItemFootprint<T extends NodeInfo> {
 	private ItemStatus status;
 	private boolean published = false;
 
-	ReportableItemFootprint(T item, Maybe<String> id) {
-		checkArgument(item != null, "Node info shouldn't be null");
+	ReportableItemFootprint(@Nonnull T item, Maybe<String> id) {
 		this.id = id;
 		this.item = item;
 	}
@@ -67,10 +66,6 @@ public abstract class ReportableItemFootprint<T extends NodeInfo> {
 
 	boolean isPublished() {
 		return published;
-	}
-
-	String getItemName() {
-		return getItem().getName();
 	}
 
 	abstract boolean hasDescendants();

@@ -1,6 +1,11 @@
 # Changelog
 
 ## [Unreleased]
+### Changed
+- Client version updated on [5.2.1](https://github.com/reportportal/client-java/releases/tag/5.2.1), by @HardNorth
+- Spock dependency marked as `implementation` to force users specify their own versions, by @HardNorth
+### Removed
+- Unused code, by @HardNorth
 
 ## [5.1.4]
 ### Changed

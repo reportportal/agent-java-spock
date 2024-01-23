@@ -30,8 +30,6 @@ import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import com.epam.ta.reportportal.ws.model.attribute.ItemAttributesRQ;
 import com.epam.ta.reportportal.ws.model.launch.StartLaunchRQ;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
 import io.reactivex.Maybe;
 import org.apache.commons.lang3.tuple.Pair;
 import org.codehaus.groovy.runtime.StackTraceUtils;
@@ -54,8 +52,8 @@ import java.util.stream.StreamSupport;
 import static com.epam.reportportal.listeners.ItemStatus.*;
 import static com.epam.reportportal.spock.NodeInfoUtils.*;
 import static com.epam.reportportal.spock.ReportableItemFootprint.IS_NOT_PUBLISHED;
-import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Optional.ofNullable;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.spockframework.runtime.model.MethodKind.*;
 
 /**
@@ -70,24 +68,22 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	private static final Method DISPLAY_NAME_METHOD = Arrays.stream(ITERATION_METHODS)
 			.filter(m -> "getDisplayName".equals(m.getName()))
 			.findAny()
-			.orElseGet(
-					() -> Arrays.stream(ITERATION_METHODS)
-							.filter(m -> "getName".equals(m.getName()))
-							.findAny()
-							.orElseThrow(() -> new IllegalStateException("Unknown Spock version."))
-			);
+			.orElseGet(() -> Arrays.stream(ITERATION_METHODS)
+					.filter(m -> "getName".equals(m.getName()))
+					.findAny()
+					.orElseThrow(() -> new IllegalStateException("Unknown Spock version.")));
 
 	private final MemoizingSupplier<Launch> launch;
 
 	// stores the bindings of Spock method kinds to the RP-specific notation
-	private static final Map<MethodKind, String> ITEM_TYPES_REGISTRY = ImmutableMap.<MethodKind, String>builder()
-			.put(SPEC_EXECUTION, "TEST")
-			.put(SETUP_SPEC, "BEFORE_CLASS")
-			.put(SETUP, "BEFORE_METHOD")
-			.put(FEATURE, "STEP")
-			.put(CLEANUP, "AFTER_METHOD")
-			.put(CLEANUP_SPEC, "AFTER_CLASS")
-			.build();
+	private static final Map<MethodKind, String> ITEM_TYPES_REGISTRY = Collections.unmodifiableMap(new HashMap<MethodKind, String>() {{
+		put(SPEC_EXECUTION, "TEST");
+		put(SETUP_SPEC, "BEFORE_CLASS");
+		put(SETUP, "BEFORE_METHOD");
+		put(FEATURE, "STEP");
+		put(CLEANUP, "AFTER_METHOD");
+		put(CLEANUP_SPEC, "AFTER_CLASS");
+	}});
 
 	private ListenerParameters launchParameters;
 	private final AbstractLaunchContext launchContext;
@@ -96,7 +92,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	protected StartLaunchRQ buildStartLaunchRq(ListenerParameters parameters) {
 		StartLaunchRQ startLaunchRQ = new StartLaunchRQ();
 		startLaunchRQ.setName(parameters.getLaunchName());
-		if (!isNullOrEmpty(parameters.getDescription())) {
+		if (isNotBlank(parameters.getDescription())) {
 			startLaunchRQ.setDescription(parameters.getDescription());
 		}
 		startLaunchRQ.setStartTime(Calendar.getInstance().getTime());
@@ -129,6 +125,10 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	public ReportPortalSpockListener(@Nonnull Supplier<Launch> launch) {
 		this(launch, new LaunchContextImpl());
+	}
+
+	void handleRpException(ReportPortalException rpException, String message) {
+		LOGGER.error(message, rpException);
 	}
 
 	public Maybe<String> startLaunch() {
@@ -394,7 +394,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	}
 
 	public void reportFixtureError(@Nonnull SpecInfo spec, @Nullable FeatureInfo feature, @Nullable IterationInfo iteration,
-								   @Nonnull ErrorInfo error) {
+			@Nonnull ErrorInfo error) {
 		MethodInfo method = error.getMethod();
 		NodeFootprint<?> ownerFootprint = findFixtureOwner(spec, feature, iteration, error.getMethod());
 		MethodKind kind = method.getKind();
@@ -483,29 +483,9 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 	}
 
-	void handleRpException(ReportPortalException rpException, String message) {
-		handleException(rpException, message);
-	}
-
-	/**
-	 * Logs error in case of {@link ReportPortalException} or propagates exception exactly as-is, if
-	 * and only if it is an instance of {@link RuntimeException} or {@link Error}.
-	 */
-	private void handleException(Exception exception, String message) {
-		if (exception instanceof ReportPortalException) {
-			if (LOGGER != null) {
-				LOGGER.error(message, exception);
-			} else {
-				System.out.println(exception.getMessage());
-			}
-		} else {
-			Throwables.throwIfUnchecked(exception);
-		}
-	}
-
 	@SuppressWarnings("rawtypes")
 	protected NodeFootprint<? extends NodeInfo> findFixtureOwner(SpecInfo spec, FeatureInfo feature, IterationInfo iteration,
-																 MethodInfo fixture) {
+			MethodInfo fixture) {
 		MethodKind kind = fixture.getKind();
 		if (kind.isSpecScopedFixtureMethod()) {
 			return launchContext.findSpecFootprint(spec);

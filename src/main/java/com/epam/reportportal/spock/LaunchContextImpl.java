@@ -15,7 +15,6 @@
  */
 package com.epam.reportportal.spock;
 
-import com.google.common.collect.Lists;
 import io.reactivex.Maybe;
 import org.spockframework.runtime.model.FeatureInfo;
 import org.spockframework.runtime.model.IterationInfo;
@@ -23,6 +22,7 @@ import org.spockframework.runtime.model.SpecInfo;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -93,24 +93,24 @@ class LaunchContextImpl extends AbstractLaunchContext {
 	}
 
 	@Override
-	public Iterable<Iteration> findIterationFootprints(final FeatureInfo featureInfo) {
+	Iterable<Iteration> findIterationFootprints(final FeatureInfo featureInfo) {
 		return ofNullable(findSpecFootprint(featureInfo.getSpec())).map(s -> s.getFeature(featureInfo))
 				.map(Feature::getAllTrackedIteration)
 				.orElse(null);
 	}
 
 	@Override
-	public Specification findSpecFootprint(final SpecInfo specInfo) {
+	Specification findSpecFootprint(final SpecInfo specInfo) {
 		return findValueInRegistry(specFootprintsRegistry, specInfo);
 	}
 
 	@Override
-	public Iterable<Specification> findAllUnpublishedSpecFootprints() {
+	Iterable<Specification> findAllUnpublishedSpecFootprints() {
 		return specFootprintsRegistry.values().stream().filter(IS_NOT_PUBLISHED).collect(Collectors.toList());
 	}
 
 	@Override
-	public RuntimePointer getRuntimePointerForSpec(SpecInfo specInfo) {
+	RuntimePointer getRuntimePointerForSpec(SpecInfo specInfo) {
 		return findValueInRegistry(runtimePointersRegistry, specInfo);
 	}
 
@@ -131,7 +131,7 @@ class LaunchContextImpl extends AbstractLaunchContext {
 
 		private List<Feature> features;
 
-		Specification(SpecInfo nodeInfo, Maybe<String> id) {
+		Specification(@Nonnull SpecInfo nodeInfo, Maybe<String> id) {
 			super(nodeInfo, id);
 		}
 
@@ -154,7 +154,7 @@ class LaunchContextImpl extends AbstractLaunchContext {
 
 		private List<Feature> getAllTrackedFeatures() {
 			if (features == null) {
-				features = Lists.newArrayList();
+				features = new ArrayList<>();
 			}
 			return features;
 		}
@@ -174,7 +174,7 @@ class LaunchContextImpl extends AbstractLaunchContext {
 
 		private List<Iteration> getAllTrackedIteration() {
 			if (iterations == null) {
-				iterations = Lists.newArrayList();
+				iterations = new ArrayList<>();
 			}
 			return iterations;
 		}
