@@ -54,7 +54,7 @@ dependencies {
     testImplementation "org.mockito:mockito-inline:${mockito_version}"
     testImplementation "org.mockito:mockito-junit-jupiter:${mockito_version}"
     testImplementation 'ch.qos.logback:logback-classic:1.3.12'
-    testImplementation 'com.epam.reportportal:logger-java-logback:5.2.0'
+    testImplementation 'com.epam.reportportal:logger-java-logback:5.2.2'
     testImplementation ("org.junit.platform:junit-platform-runner:${junit5_launcher_version}") {
         exclude module: 'junit'
     }
