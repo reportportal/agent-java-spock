@@ -7,7 +7,7 @@
 [![Maven Central](https://img.shields.io/maven-central/v/com.epam.reportportal/agent-java-spock.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/com.epam.reportportal/agent-java-spock)
 [![CI Build](https://github.com/reportportal/agent-java-spock/actions/workflows/ci.yml/badge.svg)](https://github.com/reportportal/agent-java-spock/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/reportportal/agent-java-spock/branch/develop/graph/badge.svg?token=Vnk338Rigx)](https://codecov.io/gh/reportportal/agent-java-spock)
-[![Join Slack chat!](https://slack.epmrpp.reportportal.io/badge.svg)](https://slack.epmrpp.reportportal.io/)
+[![Join Slack chat!](https://img.shields.io/badge/slack-join-brightgreen.svg)](https://slack.epmrpp.reportportal.io/)
 [![stackoverflow](https://img.shields.io/badge/reportportal-stackoverflow-orange.svg?style=flat)](http://stackoverflow.com/questions/tagged/reportportal)
 [![Build with Love](https://img.shields.io/badge/build%20with-❤%EF%B8%8F%E2%80%8D-lightgrey.svg)](http://reportportal.io?style=flat)
 
@@ -107,21 +107,21 @@ If you prefer using *Logback* logging library, add following dependencies:
 
 *ReportPortal logback logger dependency*
 ```gradle
-testCompile 'com.epam.reportportal:logger-java-logback:5.1.6'
+testCompile 'com.epam.reportportal:logger-java-logback:5.2.2'
 ```
 
 > Up to date version could be found [here](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22logger-java-logback%22)
 
 *The logback itself*
 ```gradle
-compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.3.8'
+compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.3.12'
 ```
 
 If you prefer using *Log4j* logging library, add following dependencies:
 
 *ReportPortal log4j logger dependency*
 ```gradle
-testCompile 'com.epam.reportportal:logger-java-log4j:5.1.8'
+testCompile 'com.epam.reportportal:logger-java-log4j:5.2.2'
 ```
 > Up to date version could be found [here](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22logger-java-log4j%22)
 
@@ -182,7 +182,7 @@ repositories {
 
 dependencies {
     testCompile 'com.epam.reportportal:agent-java-spock:5.2.1'
-    testCompile 'com.epam.reportportal:logger-java-logback:5.1.6'
+    testCompile 'com.epam.reportportal:logger-java-logback:5.2.2'
 
     testCompile "org.seleniumhq.selenium:selenium-support:$seleniumVersion"
     testCompile "org.gebish:geb-spock:$gebVersion"
