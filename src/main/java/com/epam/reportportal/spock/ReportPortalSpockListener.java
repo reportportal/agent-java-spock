@@ -31,6 +31,7 @@ import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import com.epam.ta.reportportal.ws.model.attribute.ItemAttributesRQ;
 import com.epam.ta.reportportal.ws.model.launch.StartLaunchRQ;
 import io.reactivex.Maybe;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.codehaus.groovy.runtime.StackTraceUtils;
 import org.slf4j.Logger;
@@ -44,6 +45,7 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -74,6 +76,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 					.orElseThrow(() -> new IllegalStateException("Unknown Spock version.")));
 
 	private final MemoizingSupplier<Launch> launch;
+	private final Map<Maybe<String>, Pair<String, String>> errorDescriptionMap = new ConcurrentHashMap<>();
 
 	// stores the bindings of Spock method kinds to the RP-specific notation
 	private static final Map<MethodKind, String> ITEM_TYPES_REGISTRY = Collections.unmodifiableMap(new HashMap<MethodKind, String>() {{
@@ -274,6 +277,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	protected void reportIterationStart(@Nonnull Maybe<String> parentId, @Nonnull StartTestItemRQ rq, @Nonnull IterationInfo iteration) {
 		Maybe<String> testItemId = startIteration(parentId, rq);
 		launchContext.addRunningIteration(testItemId, iteration);
+		errorDescriptionMap.put(launchContext.findIterationFootprint(iteration).getId(), Pair.of(rq.getDescription(), StringUtils.EMPTY));
 	}
 
 	public void registerIteration(@Nonnull IterationInfo iteration) {
@@ -303,6 +307,15 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		FinishTestItemRQ rq = new FinishTestItemRQ();
 		ofNullable(status).ifPresent(s -> rq.setStatus(s.name()));
 		rq.setEndTime(Calendar.getInstance().getTime());
+		if (Objects.equals(status, ItemStatus.FAILED) && errorDescriptionMap.containsKey(itemId)) {
+			if (Objects.nonNull(errorDescriptionMap.get(itemId).getLeft())) {
+				rq.setDescription(
+						String.format("%s\nError:\n%s", errorDescriptionMap.get(itemId).getLeft(), errorDescriptionMap.get(itemId).getRight()));
+			} else {
+				rq.setDescription(String.format("Error:\n%s", errorDescriptionMap.get(itemId).getRight()));
+			}
+		}
+		errorDescriptionMap.remove(itemId);
 		return rq;
 	}
 
@@ -439,6 +452,10 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 			ofNullable(launchContext.findFeatureFootprint(method.getFeature())).ifPresent(f -> f.setStatus(FAILED));
 			ofNullable(launchContext.getRuntimePointerForSpec(method.getParent())
 					.getCurrentIteration()).map(launchContext::findIterationFootprint).ifPresent(i -> i.setStatus(FAILED));
+			Maybe<String> itemId = launchContext.findIterationFootprint(error.getMethod().getIteration()).getId();
+			String startDescriptions = errorDescriptionMap.get(itemId).getLeft();
+			Pair<String, String> startFinishDescriptions = Pair.of(startDescriptions, error.getException().toString());
+			errorDescriptionMap.put(itemId, startFinishDescriptions);
 			logError(error);
 		} else if (ITERATION_EXECUTION == kind) {
 			ofNullable(launchContext.findIterationFootprint(method.getIteration())).ifPresent(i -> i.setStatus(FAILED));
