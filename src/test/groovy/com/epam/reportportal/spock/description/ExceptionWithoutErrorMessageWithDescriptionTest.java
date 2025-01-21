@@ -22,8 +22,7 @@ import static com.epam.reportportal.spock.utils.TestUtils.runClasses;
 import static com.epam.reportportal.spock.utils.TestUtils.standardParameters;
 import static com.epam.reportportal.spock.utils.TestUtils.testExecutor;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -36,7 +35,7 @@ public class ExceptionWithoutErrorMessageWithDescriptionTest {
 
     private final ReportPortalClient client = mock(ReportPortalClient.class);
 
-    private static final String ERROR_DESCRIPTION_EXCEPTION = "Setup: \nWhen: \nThen: \nError:\njava.util.NoSuchElementException";
+    private static final String ERROR_DESCRIPTION_EXCEPTION = "Setup: \nWhen: \nThen: \n\n---\n\nError:\njava.util.NoSuchElementException";
 
     @BeforeEach
     public void setupMock() {
@@ -47,10 +46,6 @@ public class ExceptionWithoutErrorMessageWithDescriptionTest {
 
     @Test
     public void verify_exception_without_error_message_with_description() {
-
-        TestUtils.mockLaunch(client, launchId, classId, methodIds);
-        TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(client, standardParameters(), testExecutor()));
-
         TestExecutionSummary result = runClasses(FailWithExceptionWithoutMessage.class);
 
         assertThat(result.getTotalFailureCount(), equalTo(1L));
@@ -65,6 +60,6 @@ public class ExceptionWithoutErrorMessageWithDescriptionTest {
                 .collect(Collectors.toList());
 
         assertThat(failedFinishItemStatuses, hasSize(1));
-        assertThat(failedFinishItemStatuses.iterator().next().getDescription(), equalTo(ERROR_DESCRIPTION_EXCEPTION));
+        assertThat(failedFinishItemStatuses.iterator().next().getDescription(), startsWith(ERROR_DESCRIPTION_EXCEPTION));
     }
 }

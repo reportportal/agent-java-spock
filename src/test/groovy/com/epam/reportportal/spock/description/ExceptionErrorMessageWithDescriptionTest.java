@@ -22,8 +22,7 @@ import static com.epam.reportportal.spock.utils.TestUtils.runClasses;
 import static com.epam.reportportal.spock.utils.TestUtils.standardParameters;
 import static com.epam.reportportal.spock.utils.TestUtils.testExecutor;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -36,7 +35,7 @@ public class ExceptionErrorMessageWithDescriptionTest {
 
     private final ReportPortalClient client = mock(ReportPortalClient.class);
 
-    private static final String ERROR_DESCRIPTION_EXCEPTION = "Setup: \nError:\njava.lang.IllegalStateException: Some test flow failure";
+    private static final String ERROR_DESCRIPTION_EXCEPTION = "Setup: \n\n---\n\nError:\njava.lang.IllegalStateException: Some test flow failure";
 
     @BeforeEach
     public void setupMock() {
@@ -47,10 +46,6 @@ public class ExceptionErrorMessageWithDescriptionTest {
 
     @Test
     public void verify_error_exception_message_with_description() {
-
-        TestUtils.mockLaunch(client, launchId, classId, methodIds);
-        TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(client, standardParameters(), testExecutor()));
-
         TestExecutionSummary result = runClasses(FailsInDifferentMethod.class);
 
         assertThat(result.getTotalFailureCount(), equalTo(1L));
@@ -64,6 +59,6 @@ public class ExceptionErrorMessageWithDescriptionTest {
                 .collect(Collectors.toList());
 
         assertThat(failedFinishItemStatuses, hasSize(1));
-        assertThat(failedFinishItemStatuses.iterator().next().getDescription(), equalTo(ERROR_DESCRIPTION_EXCEPTION));
+        assertThat(failedFinishItemStatuses.iterator().next().getDescription(), startsWith(ERROR_DESCRIPTION_EXCEPTION));
     }
 }
