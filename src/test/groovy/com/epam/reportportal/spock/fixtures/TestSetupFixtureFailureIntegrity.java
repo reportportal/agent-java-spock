@@ -64,6 +64,7 @@ public class TestSetupFixtureFailureIntegrity {
 
 		assertThat(result.getTotalFailureCount(), equalTo(1L));
 
+		verify(client).getProjectSettings();
 		verify(client).startLaunch(any());
 		verify(client).startTestItem(any(StartTestItemRQ.class));
 		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
