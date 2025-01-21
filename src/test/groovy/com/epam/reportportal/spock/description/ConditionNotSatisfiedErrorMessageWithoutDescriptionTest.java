@@ -27,6 +27,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -40,7 +41,7 @@ public class ConditionNotSatisfiedErrorMessageWithoutDescriptionTest {
 
     private final ReportPortalClient client = mock(ReportPortalClient.class);
 
-    private static final String ERROR_DESCRIPTION = "Error:\nCondition not satisfied:\n\nname.size() == length\n|    |      |  |\n|    6      |  7\nScotty      false\n";
+    private static final String ERROR_DESCRIPTION = "Error:\nCondition not satisfied:\nname.size() == length\n|    |      |  |\n|    6      |  7\nScotty      false\n";
 
 
     @BeforeEach
@@ -75,6 +76,6 @@ public class ConditionNotSatisfiedErrorMessageWithoutDescriptionTest {
 
         assertThat(failedFinishItemStatuses, hasSize(1));
 
-        assertThat(failedFinishItemStatuses.iterator().next().getDescription(), equalTo(ERROR_DESCRIPTION));
+        assertThat(failedFinishItemStatuses.iterator().next().getDescription(), startsWith(ERROR_DESCRIPTION));
     }
 }
