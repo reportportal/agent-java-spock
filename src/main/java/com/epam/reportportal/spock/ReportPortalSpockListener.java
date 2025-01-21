@@ -25,6 +25,8 @@ import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.item.TestCaseIdEntry;
 import com.epam.reportportal.spock.utils.SystemAttributesFetcher;
 import com.epam.reportportal.utils.*;
+import com.epam.reportportal.utils.formatting.ExceptionUtils;
+import com.epam.reportportal.utils.formatting.MarkdownUtils;
 import com.epam.ta.reportportal.ws.model.FinishExecutionRQ;
 import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
 import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
@@ -141,7 +143,8 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 				launchContext.setLaunchId(launchId);
 				return launchId;
 			} catch (ReportPortalException ex) {
-				handleRpException(ex,
+				handleRpException(
+						ex,
 						"Unable start the launch: '" + ofNullable(launchParameters).map(ListenerParameters::getLaunchName)
 								.orElse("Unknown Launch") + "'"
 				);
@@ -213,9 +216,11 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	public void registerFixture(SpecInfo spec, @Nonnull FeatureInfo feature, IterationInfo iteration, @Nonnull MethodInfo fixture) {
 		NodeFootprint<SpecInfo> specFootprint = launchContext.findSpecFootprint(spec);
 		StartTestItemRQ rq = buildFixtureItemRq(feature, fixture, !fixture.getParent().equals(specFootprint.getItem()));
-		Maybe<String> testItemId = startFixture(rq.isHasStats() ?
-				specFootprint.getId() :
-				launchContext.findFeatureFootprint(feature).getId(), rq);
+		Maybe<String> testItemId = startFixture(
+				rq.isHasStats() ?
+						specFootprint.getId() :
+						launchContext.findFeatureFootprint(feature).getId(), rq
+		);
 		@SuppressWarnings("rawtypes")
 		NodeFootprint<? extends NodeInfo> fixtureOwnerFootprint = findFixtureOwner(spec, feature, iteration, fixture);
 		fixtureOwnerFootprint.addFixtureFootprint(new FixtureFootprint(fixture, testItemId));
@@ -262,7 +267,8 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 				.orElse(null));
 		List<Object> paramList = ofNullable(params).orElse(Collections.emptyList());
 		List<String> names = iteration.getFeature().getParameterNames();
-		rq.setParameters(ParameterUtils.getParameters(codeRef,
+		rq.setParameters(ParameterUtils.getParameters(
+				codeRef,
 				IntStream.range(0, paramList.size()).mapToObj(i -> Pair.of(names.get(i), paramList.get(i))).collect(Collectors.toList())
 		));
 		setFeatureAttributes(rq, iteration.getFeature());
@@ -282,12 +288,14 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 
 	public void registerIteration(@Nonnull IterationInfo iteration) {
 		if (iteration.getFeature().isReportIterations()) {
-			reportIterationStart(launchContext.findSpecFootprint(iteration.getFeature().getSpec()).getId(),
+			reportIterationStart(
+					launchContext.findSpecFootprint(iteration.getFeature().getSpec()).getId(),
 					buildIterationItemRq(iteration),
 					iteration
 			);
 		} else if (iteration.getFeature().isParameterized()) {
-			reportIterationStart(launchContext.findFeatureFootprint(iteration.getFeature()).getId(),
+			reportIterationStart(
+					launchContext.findFeatureFootprint(iteration.getFeature()).getId(),
 					buildNestedIterationItemRq(iteration),
 					iteration
 			);
@@ -308,11 +316,11 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		ofNullable(status).ifPresent(s -> rq.setStatus(s.name()));
 		rq.setEndTime(Calendar.getInstance().getTime());
 		if (Objects.equals(status, ItemStatus.FAILED) && errorDescriptionMap.containsKey(itemId)) {
-			if (Objects.nonNull(errorDescriptionMap.get(itemId).getLeft())) {
-				rq.setDescription(
-						String.format("%s\nError:\n%s", errorDescriptionMap.get(itemId).getLeft(), errorDescriptionMap.get(itemId).getRight()));
+			String formattedException = String.format("Error:\n%s", errorDescriptionMap.get(itemId).getRight());
+			if (StringUtils.isNotBlank(errorDescriptionMap.get(itemId).getLeft())) {
+				rq.setDescription(MarkdownUtils.asTwoParts(errorDescriptionMap.get(itemId).getLeft(), formattedException));
 			} else {
-				rq.setDescription(String.format("Error:\n%s", errorDescriptionMap.get(itemId).getRight()));
+				rq.setDescription(String.format(formattedException));
 			}
 		}
 		errorDescriptionMap.remove(itemId);
@@ -454,7 +462,10 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 					.getCurrentIteration()).map(launchContext::findIterationFootprint).ifPresent(i -> i.setStatus(FAILED));
 			Maybe<String> itemId = launchContext.findIterationFootprint(error.getMethod().getIteration()).getId();
 			String startDescriptions = errorDescriptionMap.get(itemId).getLeft();
-			Pair<String, String> startFinishDescriptions = Pair.of(startDescriptions, error.getException().toString());
+			Pair<String, String> startFinishDescriptions = Pair.of(
+					startDescriptions,
+					ExceptionUtils.getStackTrace(error.getException(), new Throwable())
+			);
 			errorDescriptionMap.put(itemId, startFinishDescriptions);
 			logError(error);
 		} else if (ITERATION_EXECUTION == kind) {
