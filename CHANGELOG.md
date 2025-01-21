@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [5.2.4]
 ### Added
 - Putting last error logs of tests to Items' description, by @YevhenPiskun
 ### Changed
