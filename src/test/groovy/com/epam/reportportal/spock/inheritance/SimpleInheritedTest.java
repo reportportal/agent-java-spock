@@ -44,7 +44,8 @@ import java.util.stream.Stream;
 import static com.epam.reportportal.spock.utils.TestUtils.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 public class SimpleInheritedTest {
 
@@ -100,10 +101,21 @@ public class SimpleInheritedTest {
 
 		assertThat(
 				testRq.stream().map(StartTestItemRQ::getCodeRef).collect(Collectors.toList()),
-				Every.everyItem(allOf(notNullValue(), equalTo(HelloSpockSpecUnroll.class.getCanonicalName() + "." + HelloSpockSpecUnroll.TEST_NAME)))
+				Every.everyItem(allOf(
+						notNullValue(),
+						equalTo(HelloSpockSpecUnroll.class.getCanonicalName() + "." + HelloSpockSpecUnroll.TEST_NAME)
+				))
 		);
-		assertThat(testRq.stream().map(StartTestItemRQ::getType).collect(Collectors.toList()), Every.everyItem(equalTo(ItemType.STEP.name())));
-		assertThat(inheritedTestRq.getCodeRef(), allOf(notNullValue(), equalTo(HelloSpockSpecInherited.class.getCanonicalName() + "." + HelloSpockSpecInherited.INHERITED_TEST_NAME)));
+		assertThat(
+				testRq.stream().map(StartTestItemRQ::getType).collect(Collectors.toList()),
+				Every.everyItem(equalTo(ItemType.STEP.name()))
+		);
+		assertThat(
+				inheritedTestRq.getCodeRef(), allOf(
+						notNullValue(),
+						equalTo(HelloSpockSpecInherited.class.getCanonicalName() + "." + HelloSpockSpecInherited.INHERITED_TEST_NAME)
+				)
+		);
 		assertThat(inheritedTestRq.getType(), allOf(notNullValue(), equalTo(ItemType.STEP.name())));
 	}
 }

@@ -83,8 +83,14 @@ public class SimpleCodeRefTest {
 		assertThat(classRq.getType(), allOf(notNullValue(), equalTo(ItemType.TEST.name())));
 		assertThat(
 				testRq.stream().map(StartTestItemRQ::getCodeRef).collect(Collectors.toList()),
-				Every.everyItem(allOf(notNullValue(), equalTo(HelloSpockSpecUnroll.class.getCanonicalName() + "." + HelloSpockSpecUnroll.TEST_NAME)))
+				Every.everyItem(allOf(
+						notNullValue(),
+						equalTo(HelloSpockSpecUnroll.class.getCanonicalName() + "." + HelloSpockSpecUnroll.TEST_NAME)
+				))
 		);
-		assertThat(testRq.stream().map(StartTestItemRQ::getType).collect(Collectors.toList()), Every.everyItem(equalTo(ItemType.STEP.name())));
+		assertThat(
+				testRq.stream().map(StartTestItemRQ::getType).collect(Collectors.toList()),
+				Every.everyItem(equalTo(ItemType.STEP.name()))
+		);
 	}
 }

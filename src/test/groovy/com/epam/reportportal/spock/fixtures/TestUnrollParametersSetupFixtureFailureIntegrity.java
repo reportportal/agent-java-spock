@@ -47,9 +47,7 @@ import static org.mockito.Mockito.*;
 public class TestUnrollParametersSetupFixtureFailureIntegrity {
 	private final String launchId = CommonUtils.namedId("launch_");
 	private final String classId = CommonUtils.namedId("class_");
-	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_"))
-			.limit(6)
-			.collect(Collectors.toList());
+	private final List<String> methodIds = Stream.generate(() -> CommonUtils.namedId("method_")).limit(6).collect(Collectors.toList());
 
 	private final ReportPortalClient client = mock(ReportPortalClient.class);
 
@@ -57,11 +55,7 @@ public class TestUnrollParametersSetupFixtureFailureIntegrity {
 	public void setupMock() {
 		TestUtils.mockLaunch(client, launchId, classId, methodIds);
 		TestUtils.mockBatchLogging(client);
-		TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(
-				client,
-				standardParameters(),
-				testExecutor()
-		));
+		TestExtension.listener = new ReportPortalSpockListener(ReportPortal.create(client, standardParameters(), testExecutor()));
 	}
 
 	@Test
@@ -78,26 +72,32 @@ public class TestUnrollParametersSetupFixtureFailureIntegrity {
 
 		List<StartTestItemRQ> startItems = startCaptor.getAllValues();
 		List<String> stepTypes = startItems.stream().map(StartTestItemRQ::getType).collect(Collectors.toList());
-		assertThat(stepTypes, containsInAnyOrder(ItemType.STEP.name(),
-				ItemType.STEP.name(),
-				ItemType.STEP.name(),
-				ItemType.BEFORE_METHOD.name(),
-				ItemType.BEFORE_METHOD.name(),
-				ItemType.BEFORE_METHOD.name()
-		));
+		assertThat(
+				stepTypes, containsInAnyOrder(
+						ItemType.STEP.name(),
+						ItemType.STEP.name(),
+						ItemType.STEP.name(),
+						ItemType.BEFORE_METHOD.name(),
+						ItemType.BEFORE_METHOD.name(),
+						ItemType.BEFORE_METHOD.name()
+				)
+		);
 
 		ArgumentCaptor<FinishTestItemRQ> finishCaptor = ArgumentCaptor.forClass(FinishTestItemRQ.class);
 		methodIds.forEach(id -> verify(client).finishTestItem(eq(id), finishCaptor.capture()));
 
 		List<FinishTestItemRQ> finishItems = finishCaptor.getAllValues();
 		List<String> statuses = finishItems.stream().map(FinishTestItemRQ::getStatus).collect(Collectors.toList());
-		assertThat(statuses, containsInAnyOrder(ItemStatus.FAILED.name(),
-				ItemStatus.FAILED.name(),
-				ItemStatus.FAILED.name(),
-				ItemStatus.SKIPPED.name(),
-				ItemStatus.SKIPPED.name(),
-				ItemStatus.SKIPPED.name()
-		));
+		assertThat(
+				statuses, containsInAnyOrder(
+						ItemStatus.FAILED.name(),
+						ItemStatus.FAILED.name(),
+						ItemStatus.FAILED.name(),
+						ItemStatus.SKIPPED.name(),
+						ItemStatus.SKIPPED.name(),
+						ItemStatus.SKIPPED.name()
+				)
+		);
 		finishItems.forEach(i -> assertThat(i.getEndTime(), notNullValue()));
 		finishItems.stream().filter(i -> ItemStatus.SKIPPED.name().equals(i.getStatus())).forEach(i -> {
 			assertThat(i.getIssue(), notNullValue());

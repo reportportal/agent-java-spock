@@ -77,7 +77,7 @@ public class TestSetupSpecFixtureIntegrity {
 		methodIds.forEach(id -> verify(client).finishTestItem(eq(id), finishCaptor.capture()));
 
 		List<FinishTestItemRQ> finishItems = finishCaptor.getAllValues();
-		finishItems.forEach(i-> {
+		finishItems.forEach(i -> {
 			assertThat(i.getEndTime(), notNullValue());
 			assertThat(i.getStatus(), equalTo(ItemStatus.PASSED.name()));
 			assertThat(i.getIssue(), nullValue());
