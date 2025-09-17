@@ -91,7 +91,7 @@ public class TestCleanupSpecFixtureFailureIntegrity {
 		verify(client).finishLaunch(eq(launchId), any());
 
 		//noinspection unchecked
-		verify(client).log(any(List.class));
+		verify(client, times(2)).log(any(List.class));
 		verifyNoMoreInteractions(client);
 	}
 }
