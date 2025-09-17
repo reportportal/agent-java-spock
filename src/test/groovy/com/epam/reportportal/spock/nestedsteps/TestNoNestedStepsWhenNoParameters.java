@@ -28,6 +28,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.launcher.listeners.TestExecutionSummary;
 
+import java.util.List;
+
 import static com.epam.reportportal.spock.utils.TestUtils.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -63,6 +65,8 @@ public class TestNoNestedStepsWhenNoParameters {
 		verify(client).finishTestItem(eq(methodId), any());
 		verify(client).finishTestItem(eq(classId), any());
 		verify(client).finishLaunch(eq(launchId), any());
+		//noinspection unchecked
+		verify(client).log(any(List.class));
 		verifyNoMoreInteractions(client);
 	}
 }

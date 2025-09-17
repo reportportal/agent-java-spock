@@ -72,9 +72,7 @@ public class TestUtils {
 				.map(DiscoverySelectors::selectClass)
 				.collect(Collectors.toList());
 
-		final LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
-						.selectors(classSelectors)
-						.build();
+		final LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request().selectors(classSelectors).build();
 
 		final Launcher launcher = LauncherFactory.create();
 		final SummaryGeneratingListener listener = new SummaryGeneratingListener();
@@ -172,8 +170,10 @@ public class TestUtils {
 				})
 				.map(b -> {
 					try {
-						return HttpRequestUtils.MAPPER.readValue(b, new TypeReference<List<SaveLogRQ>>() {
-						});
+						return HttpRequestUtils.MAPPER.readValue(
+								b, new TypeReference<List<SaveLogRQ>>() {
+								}
+						);
 					} catch (IOException e) {
 						return Collections.<SaveLogRQ>emptyList();
 					}

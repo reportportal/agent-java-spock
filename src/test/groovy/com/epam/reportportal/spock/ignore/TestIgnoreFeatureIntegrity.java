@@ -16,7 +16,6 @@
 
 package com.epam.reportportal.spock.ignore;
 
-import com.epam.reportportal.listeners.ItemStatus;
 import com.epam.reportportal.listeners.ItemType;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.ReportPortalClient;
@@ -33,8 +32,6 @@ import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.epam.reportportal.spock.utils.TestUtils.*;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -82,6 +79,8 @@ public class TestIgnoreFeatureIntegrity {
 
 		verify(client).finishTestItem(eq(classId), any());
 		verify(client).finishLaunch(eq(launchId), any());
+		//noinspection unchecked
+		verify(client).log(any(List.class));
 		verifyNoMoreInteractions(client);
 	}
 }

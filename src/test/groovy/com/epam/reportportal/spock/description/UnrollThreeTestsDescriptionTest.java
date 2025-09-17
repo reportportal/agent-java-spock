@@ -70,8 +70,9 @@ public class UnrollThreeTestsDescriptionTest {
 		List<StartTestItemRQ> items = captor.getAllValues();
 		List<String> descriptions = items.stream().map(StartRQ::getDescription).collect(Collectors.toList());
 
-		assertThat(descriptions,
-				containsInAnyOrder(STATIC_PART + "name: Spock; length: 5",
+		assertThat(
+				descriptions, containsInAnyOrder(
+						STATIC_PART + "name: Spock; length: 5",
 						STATIC_PART + "name: Kirk; length: 4",
 						STATIC_PART + "name: Scotty; length: 6"
 				)

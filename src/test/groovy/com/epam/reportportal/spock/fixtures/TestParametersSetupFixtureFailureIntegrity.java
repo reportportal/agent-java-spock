@@ -79,14 +79,16 @@ public class TestParametersSetupFixtureFailureIntegrity {
 
 		List<StartTestItemRQ> startItems = startCaptor.getAllValues();
 		List<String> stepTypes = startItems.stream().map(StartTestItemRQ::getType).collect(Collectors.toList());
-		assertThat(stepTypes, containsInAnyOrder(
-				ItemType.STEP.name(),
-				ItemType.STEP.name(),
-				ItemType.STEP.name(),
-				ItemType.BEFORE_METHOD.name(),
-				ItemType.BEFORE_METHOD.name(),
-				ItemType.BEFORE_METHOD.name()
-		));
+		assertThat(
+				stepTypes, containsInAnyOrder(
+						ItemType.STEP.name(),
+						ItemType.STEP.name(),
+						ItemType.STEP.name(),
+						ItemType.BEFORE_METHOD.name(),
+						ItemType.BEFORE_METHOD.name(),
+						ItemType.BEFORE_METHOD.name()
+				)
+		);
 		startItems.forEach(i -> assertThat(i.isHasStats(), equalTo(Boolean.FALSE)));
 
 		ArgumentCaptor<FinishTestItemRQ> finishNestedCaptor = ArgumentCaptor.forClass(FinishTestItemRQ.class);
@@ -94,21 +96,21 @@ public class TestParametersSetupFixtureFailureIntegrity {
 
 		List<FinishTestItemRQ> finishNestedItems = finishNestedCaptor.getAllValues();
 		List<String> statuses = finishNestedItems.stream().map(FinishTestItemRQ::getStatus).collect(Collectors.toList());
-		assertThat(statuses, containsInAnyOrder(
-				ItemStatus.FAILED.name(),
-				ItemStatus.FAILED.name(),
-				ItemStatus.FAILED.name(),
-				ItemStatus.SKIPPED.name(),
-				ItemStatus.SKIPPED.name(),
-				ItemStatus.SKIPPED.name()
-		));
+		assertThat(
+				statuses, containsInAnyOrder(
+						ItemStatus.FAILED.name(),
+						ItemStatus.FAILED.name(),
+						ItemStatus.FAILED.name(),
+						ItemStatus.SKIPPED.name(),
+						ItemStatus.SKIPPED.name(),
+						ItemStatus.SKIPPED.name()
+				)
+		);
 		finishNestedItems.forEach(i -> assertThat(i.getEndTime(), notNullValue()));
-		finishNestedItems.stream()
-				.filter(i -> ItemStatus.SKIPPED.name().equals(i.getStatus()))
-				.forEach(i -> {
-					assertThat(i.getIssue(), notNullValue());
-					assertThat(i.getIssue().getIssueType(), equalTo(Launch.NOT_ISSUE.getIssueType()));
-				});
+		finishNestedItems.stream().filter(i -> ItemStatus.SKIPPED.name().equals(i.getStatus())).forEach(i -> {
+			assertThat(i.getIssue(), notNullValue());
+			assertThat(i.getIssue().getIssueType(), equalTo(Launch.NOT_ISSUE.getIssueType()));
+		});
 
 		ArgumentCaptor<FinishTestItemRQ> finishCaptor = ArgumentCaptor.forClass(FinishTestItemRQ.class);
 		verify(client).finishTestItem(eq(methodId), finishCaptor.capture());

@@ -43,8 +43,8 @@ import java.util.stream.Stream;
 import static com.epam.reportportal.spock.utils.TestUtils.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 public class TestFailsWithStackTrace {
