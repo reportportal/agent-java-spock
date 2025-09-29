@@ -11,7 +11,7 @@
 [![stackoverflow](https://img.shields.io/badge/reportportal-stackoverflow-orange.svg?style=flat)](http://stackoverflow.com/questions/tagged/reportportal)
 [![Build with Love](https://img.shields.io/badge/build%20with-❤%EF%B8%8F%E2%80%8D-lightgrey.svg)](http://reportportal.io?style=flat)
 
-The latest version: 5.3.2. Please use `Maven Central` link above to get the client.
+The latest version: 5.4.0. Please use `Maven Central` link above to get the client.
 
 ## Video Tutorial for integration of SPOCK on Groovy
 [![Spock on Groovy](https://img.youtube.com/vi/Rkm8dpTZur8/0.jpg)](https://www.youtube.com/watch?v=Rkm8dpTZur8)
@@ -72,7 +72,7 @@ repositories {
 
 *ReportPortal agent implementation for Spock framework*
 ```gradle
-testCompile 'com.epam.reportportal:agent-java-spock:5.3.2'
+testCompile 'com.epam.reportportal:agent-java-spock:5.4.0'
 ```
 
 *Selenium support*
@@ -181,7 +181,7 @@ repositories {
 }
 
 dependencies {
-    testCompile 'com.epam.reportportal:agent-java-spock:5.3.2'
+    testCompile 'com.epam.reportportal:agent-java-spock:5.4.0'
     testCompile 'com.epam.reportportal:logger-java-logback:5.2.2'
 
     testCompile "org.seleniumhq.selenium:selenium-support:$seleniumVersion"
