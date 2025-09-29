@@ -468,7 +468,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 			ofNullable(launchContext.getRuntimePointerForSpec(method.getParent())
 					.getCurrentIteration()).map(launchContext::findIterationFootprint).ifPresent(i -> i.setStatus(FAILED));
 			Maybe<String> itemId = launchContext.findIterationFootprint(error.getMethod().getIteration()).getId();
-			String startDescriptions = errorDescriptionMap.get(itemId).getLeft();
+			String startDescriptions = ofNullable(errorDescriptionMap.get(itemId)).map(Pair::getLeft).orElse(null);
 			Pair<String, String> startFinishDescriptions = Pair.of(
 					startDescriptions,
 					ExceptionUtils.getStackTrace(error.getException(), new Throwable())
