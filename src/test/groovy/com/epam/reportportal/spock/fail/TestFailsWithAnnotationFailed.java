@@ -70,6 +70,7 @@ public class TestFailsWithAnnotationFailed {
 		assertThat(result.getTotalFailureCount(), equalTo(1L));
 
 		verify(client).getProjectSettings();
+		verify(client).getApiInfo();
 		verify(client).startLaunch(any());
 		ArgumentCaptor<StartTestItemRQ> startCaptor = ArgumentCaptor.forClass(StartTestItemRQ.class);
 		verify(client).startTestItem(any(StartTestItemRQ.class));

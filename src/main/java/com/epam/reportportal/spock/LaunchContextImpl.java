@@ -16,12 +16,12 @@
 package com.epam.reportportal.spock;
 
 import io.reactivex.Maybe;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.spockframework.runtime.model.FeatureInfo;
 import org.spockframework.runtime.model.IterationInfo;
 import org.spockframework.runtime.model.SpecInfo;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -77,7 +77,7 @@ class LaunchContextImpl extends AbstractLaunchContext {
 	@Override
 	@Nullable
 	public NodeFootprint<FeatureInfo> findFeatureFootprint(FeatureInfo featureInfo) {
-		return ofNullable(findSpecFootprint(featureInfo.getSpec())).map(s->s.getFeature(featureInfo)).orElse(null);
+		return ofNullable(findSpecFootprint(featureInfo.getSpec())).map(s -> s.getFeature(featureInfo)).orElse(null);
 	}
 
 	@Override

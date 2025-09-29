@@ -58,6 +58,7 @@ public class TestNoNestedStepsWhenNoParameters {
 		assertThat(result.getTotalFailureCount(), equalTo(0L));
 
 		verify(client).getProjectSettings();
+		verify(client).getApiInfo();
 		verify(client).startLaunch(any());
 		verify(client).startTestItem(any(StartTestItemRQ.class));
 		verify(client).startTestItem(same(classId), any(StartTestItemRQ.class));

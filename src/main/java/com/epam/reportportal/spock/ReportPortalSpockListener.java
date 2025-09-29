@@ -33,6 +33,8 @@ import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import com.epam.ta.reportportal.ws.model.attribute.ItemAttributesRQ;
 import com.epam.ta.reportportal.ws.model.launch.StartLaunchRQ;
 import io.reactivex.Maybe;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.codehaus.groovy.runtime.StackTraceUtils;
@@ -41,11 +43,10 @@ import org.slf4j.LoggerFactory;
 import org.spockframework.runtime.AbstractRunListener;
 import org.spockframework.runtime.model.*;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -81,14 +82,20 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	private final Map<Maybe<String>, Pair<String, String>> errorDescriptionMap = new ConcurrentHashMap<>();
 
 	// stores the bindings of Spock method kinds to the RP-specific notation
-	private static final Map<MethodKind, String> ITEM_TYPES_REGISTRY = Collections.unmodifiableMap(new HashMap<MethodKind, String>() {{
-		put(SPEC_EXECUTION, "TEST");
-		put(SETUP_SPEC, "BEFORE_CLASS");
-		put(SETUP, "BEFORE_METHOD");
-		put(FEATURE, "STEP");
-		put(CLEANUP, "AFTER_METHOD");
-		put(CLEANUP_SPEC, "AFTER_CLASS");
-	}});
+	private static final Map<MethodKind, String> ITEM_TYPES_REGISTRY = Map.of(
+			SPEC_EXECUTION,
+			"TEST",
+			SETUP_SPEC,
+			"BEFORE_CLASS",
+			SETUP,
+			"BEFORE_METHOD",
+			FEATURE,
+			"STEP",
+			CLEANUP,
+			"AFTER_METHOD",
+			CLEANUP_SPEC,
+			"AFTER_CLASS"
+	);
 
 	private ListenerParameters launchParameters;
 	private final AbstractLaunchContext launchContext;
@@ -100,7 +107,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		if (isNotBlank(parameters.getDescription())) {
 			startLaunchRQ.setDescription(parameters.getDescription());
 		}
-		startLaunchRQ.setStartTime(Calendar.getInstance().getTime());
+		startLaunchRQ.setStartTime(Instant.now());
 		Set<ItemAttributesRQ> attributes = new HashSet<>();
 		attributes.addAll(parameters.getAttributes());
 		attributes.addAll(SystemAttributesFetcher.collectSystemAttributes(parameters.getSkippedAnIssue()));
@@ -165,7 +172,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	protected StartTestItemRQ buildBaseStartTestItemRq(@Nonnull String name, @Nonnull String type) {
 		StartTestItemRQ rq = new StartTestItemRQ();
 		rq.setName(name);
-		rq.setStartTime(Calendar.getInstance().getTime());
+		rq.setStartTime(Instant.now());
 		rq.setType(type);
 		rq.setLaunchUuid(launchContext.getLaunchId().blockingGet());
 		return rq;
@@ -314,7 +321,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	protected FinishTestItemRQ buildFinishTestItemRq(@Nonnull Maybe<String> itemId, @Nullable ItemStatus status) {
 		FinishTestItemRQ rq = new FinishTestItemRQ();
 		ofNullable(status).ifPresent(s -> rq.setStatus(s.name()));
-		rq.setEndTime(Calendar.getInstance().getTime());
+		rq.setEndTime(Instant.now());
 		if (Objects.equals(status, ItemStatus.FAILED) && errorDescriptionMap.containsKey(itemId)) {
 			String formattedException = String.format("Error:\n%s", errorDescriptionMap.get(itemId).getRight());
 			if (StringUtils.isNotBlank(errorDescriptionMap.get(itemId).getLeft())) {
@@ -461,7 +468,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 			ofNullable(launchContext.getRuntimePointerForSpec(method.getParent())
 					.getCurrentIteration()).map(launchContext::findIterationFootprint).ifPresent(i -> i.setStatus(FAILED));
 			Maybe<String> itemId = launchContext.findIterationFootprint(error.getMethod().getIteration()).getId();
-			String startDescriptions = errorDescriptionMap.get(itemId).getLeft();
+			String startDescriptions = ofNullable(errorDescriptionMap.get(itemId)).map(Pair::getLeft).orElse(null);
 			Pair<String, String> startFinishDescriptions = Pair.of(
 					startDescriptions,
 					ExceptionUtils.getStackTrace(error.getException(), new Throwable())
@@ -492,7 +499,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	@Nonnull
 	private FinishExecutionRQ buildFinishExecutionRq() {
 		FinishExecutionRQ rq = new FinishExecutionRQ();
-		rq.setEndTime(Calendar.getInstance().getTime());
+		rq.setEndTime(Instant.now());
 		return rq;
 	}
 

@@ -30,7 +30,8 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.spockframework.runtime.model.BlockKind.*;
 
 /**
@@ -52,7 +53,8 @@ public class NodeInfoUtilsTest {
 		Collection<String> generatedTexts = generateBlockTexts(expectedTextBlocksCount);
 		Iterator<String> generatedTextsIterator = generatedTexts.iterator();
 
-		List<BlockInfo> blocks = asList(createBlockInfo(EXPECT, singletonList(generatedTextsIterator.next())),
+		List<BlockInfo> blocks = asList(
+				createBlockInfo(EXPECT, singletonList(generatedTextsIterator.next())),
 				createBlockInfo(WHERE, singletonList(null)),
 				createBlockInfo(WHERE, singletonList(""))
 		);
@@ -71,7 +73,8 @@ public class NodeInfoUtilsTest {
 		Collection<String> generatedTexts = generateBlockTexts(expectedTextBlocksCount);
 		Iterator<String> generatedTextsIterator = generatedTexts.iterator();
 
-		List<BlockInfo> blocks = asList(createBlockInfo(SETUP, singletonList(generatedTextsIterator.next())),
+		List<BlockInfo> blocks = asList(
+				createBlockInfo(SETUP, singletonList(generatedTextsIterator.next())),
 				createBlockInfo(WHEN, singletonList(generatedTextsIterator.next())),
 				createBlockInfo(THEN, singletonList(generatedTextsIterator.next())),
 				createBlockInfo(EXPECT, singletonList(generatedTextsIterator.next())),
@@ -79,7 +82,8 @@ public class NodeInfoUtilsTest {
 				createBlockInfo(WHERE, singletonList(generatedTextsIterator.next()))
 		);
 
-		String expectedDescription = String.format("Setup: %s%nWhen: %s%nThen: %s%nExpect: %s%nCleanup: %s%nWhere: %s",
+		String expectedDescription = String.format(
+				"Setup: %s%nWhen: %s%nThen: %s%nExpect: %s%nCleanup: %s%nWhere: %s",
 				generatedTexts.toArray()
 		);
 
@@ -121,7 +125,8 @@ public class NodeInfoUtilsTest {
 		String plainFixtureName = "inherited";
 		when(plainFixtureInfo.getName()).thenReturn(plainFixtureName);
 
-		return Arrays.asList(new Object[] { plainFixtureInfo, false, plainFixtureName },
+		return Arrays.asList(
+				new Object[] { plainFixtureInfo, false, plainFixtureName },
 				new Object[] { inheritedFixtureInfo, true, expectedInheritedName }
 		);
 	}

@@ -1,10 +1,9 @@
 package com.epam.reportportal.spock;
 
+import jakarta.annotation.Nonnull;
 import org.spockframework.runtime.extension.IMethodInterceptor;
 import org.spockframework.runtime.extension.IMethodInvocation;
 import org.spockframework.runtime.model.ErrorInfo;
-
-import javax.annotation.Nonnull;
 
 /**
  * Implementation of {@link org.spockframework.runtime.extension.IMethodInterceptor}, which allows to report
@@ -30,7 +29,8 @@ class FixtureInterceptor implements IMethodInterceptor {
 			exception = ex;
 			// explicitly report exception to has an ability to track error
 			// before result publishing
-			spockService.reportFixtureError(invocation.getSpec(),
+			spockService.reportFixtureError(
+					invocation.getSpec(),
 					invocation.getFeature(),
 					invocation.getIteration(),
 					new ErrorInfo(invocation.getMethod(), ex)
