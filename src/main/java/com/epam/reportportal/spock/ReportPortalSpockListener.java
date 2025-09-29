@@ -33,6 +33,8 @@ import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
 import com.epam.ta.reportportal.ws.model.attribute.ItemAttributesRQ;
 import com.epam.ta.reportportal.ws.model.launch.StartLaunchRQ;
 import io.reactivex.Maybe;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.codehaus.groovy.runtime.StackTraceUtils;
@@ -41,23 +43,11 @@ import org.slf4j.LoggerFactory;
 import org.spockframework.runtime.AbstractRunListener;
 import org.spockframework.runtime.model.*;
 
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.Spliterator;
-import java.util.Spliterators;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -92,14 +82,20 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	private final Map<Maybe<String>, Pair<String, String>> errorDescriptionMap = new ConcurrentHashMap<>();
 
 	// stores the bindings of Spock method kinds to the RP-specific notation
-	private static final Map<MethodKind, String> ITEM_TYPES_REGISTRY = Collections.unmodifiableMap(new HashMap<MethodKind, String>() {{
-		put(SPEC_EXECUTION, "TEST");
-		put(SETUP_SPEC, "BEFORE_CLASS");
-		put(SETUP, "BEFORE_METHOD");
-		put(FEATURE, "STEP");
-		put(CLEANUP, "AFTER_METHOD");
-		put(CLEANUP_SPEC, "AFTER_CLASS");
-	}});
+	private static final Map<MethodKind, String> ITEM_TYPES_REGISTRY = Map.of(
+			SPEC_EXECUTION,
+			"TEST",
+			SETUP_SPEC,
+			"BEFORE_CLASS",
+			SETUP,
+			"BEFORE_METHOD",
+			FEATURE,
+			"STEP",
+			CLEANUP,
+			"AFTER_METHOD",
+			CLEANUP_SPEC,
+			"AFTER_CLASS"
+	);
 
 	private ListenerParameters launchParameters;
 	private final AbstractLaunchContext launchContext;

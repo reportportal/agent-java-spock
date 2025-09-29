@@ -21,16 +21,14 @@ import com.epam.reportportal.service.LaunchImpl;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.util.test.CommonUtils;
 import com.epam.reportportal.utils.http.HttpRequestUtils;
-import com.epam.ta.reportportal.ws.model.ApiInfo;
-import com.epam.ta.reportportal.ws.model.BatchSaveOperatingRS;
-import com.epam.ta.reportportal.ws.model.Constants;
-import com.epam.ta.reportportal.ws.model.EntryCreatedAsyncRS;
-import com.epam.ta.reportportal.ws.model.OperationCompletionRS;
+import com.epam.ta.reportportal.ws.model.*;
 import com.epam.ta.reportportal.ws.model.item.ItemCreatedRS;
 import com.epam.ta.reportportal.ws.model.launch.StartLaunchRS;
 import com.epam.ta.reportportal.ws.model.log.SaveLogRQ;
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.reactivex.Maybe;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import okhttp3.MultipartBody;
 import okio.Buffer;
 import org.apache.commons.lang3.tuple.Pair;
@@ -44,8 +42,6 @@ import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
 import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.mockito.stubbing.Answer;
 
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -139,10 +135,6 @@ public class TestUtils {
 		when(client.log(any(List.class))).thenReturn(Maybe.just(new BatchSaveOperatingRS()));
 	}
 
-	public static void mockSingleLogging(final ReportPortalClient client) {
-		when(client.log(any(SaveLogRQ.class))).thenReturn(Maybe.just(new EntryCreatedAsyncRS()));
-	}
-
 	@SuppressWarnings("unchecked")
 	public static void mockNestedSteps(final ReportPortalClient client, final List<Pair<String, String>> parentNestedPairs) {
 		Map<String, List<String>> responseOrders = parentNestedPairs.stream()
@@ -180,7 +172,7 @@ public class TestUtils {
 				.map(b -> {
 					try {
 						return HttpRequestUtils.MAPPER.readValue(
-								b, new TypeReference<List<SaveLogRQ>>() {
+								b, new TypeReference<>() {
 								}
 						);
 					} catch (IOException e) {

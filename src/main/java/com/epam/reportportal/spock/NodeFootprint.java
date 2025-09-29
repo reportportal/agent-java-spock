@@ -16,10 +16,10 @@
 package com.epam.reportportal.spock;
 
 import io.reactivex.Maybe;
+import jakarta.annotation.Nonnull;
 import org.spockframework.runtime.model.MethodInfo;
 import org.spockframework.runtime.model.NodeInfo;
 
-import jakarta.annotation.Nonnull;
 import java.lang.reflect.AnnotatedElement;
 import java.util.ArrayList;
 import java.util.List;

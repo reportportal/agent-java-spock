@@ -135,10 +135,7 @@ final class NodeInfoUtils {
 		}
 		// append conjunction blocks
 		while (textsIterator.hasNext()) {
-			featureDescription.append(LINE_SEPARATOR)
-					.append(CONJUNCTION_KEYWORD)
-					.append(BLOCK_SPLITTER)
-					.append(textsIterator.next());
+			featureDescription.append(LINE_SEPARATOR).append(CONJUNCTION_KEYWORD).append(BLOCK_SPLITTER).append(textsIterator.next());
 		}
 	}
 
@@ -149,9 +146,11 @@ final class NodeInfoUtils {
 	 * @return capitalized block kind name
 	 */
 	private static String formatBlockKind(BlockKind blockKind) {
-		return BLOCK_NAMES.computeIfAbsent(blockKind, b -> {
-			String blockName = b.name();
-			return blockName.charAt(0) + blockName.substring(1).toLowerCase(Locale.US);
-		});
+		return BLOCK_NAMES.computeIfAbsent(
+				blockKind, b -> {
+					String blockName = b.name();
+					return blockName.charAt(0) + blockName.substring(1).toLowerCase(Locale.US);
+				}
+		);
 	}
 }
