@@ -17,9 +17,9 @@ package com.epam.reportportal.spock;
 
 import com.epam.reportportal.listeners.ItemStatus;
 import io.reactivex.Maybe;
+import jakarta.annotation.Nonnull;
 import org.spockframework.runtime.model.NodeInfo;
 
-import javax.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.Predicate;
 

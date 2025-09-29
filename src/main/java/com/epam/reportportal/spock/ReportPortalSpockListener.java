@@ -41,12 +41,23 @@ import org.slf4j.LoggerFactory;
 import org.spockframework.runtime.AbstractRunListener;
 import org.spockframework.runtime.model.*;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -100,7 +111,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		if (isNotBlank(parameters.getDescription())) {
 			startLaunchRQ.setDescription(parameters.getDescription());
 		}
-		startLaunchRQ.setStartTime(Calendar.getInstance().getTime());
+		startLaunchRQ.setStartTime(Instant.now());
 		Set<ItemAttributesRQ> attributes = new HashSet<>();
 		attributes.addAll(parameters.getAttributes());
 		attributes.addAll(SystemAttributesFetcher.collectSystemAttributes(parameters.getSkippedAnIssue()));
@@ -165,7 +176,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	protected StartTestItemRQ buildBaseStartTestItemRq(@Nonnull String name, @Nonnull String type) {
 		StartTestItemRQ rq = new StartTestItemRQ();
 		rq.setName(name);
-		rq.setStartTime(Calendar.getInstance().getTime());
+		rq.setStartTime(Instant.now());
 		rq.setType(type);
 		rq.setLaunchUuid(launchContext.getLaunchId().blockingGet());
 		return rq;
@@ -314,7 +325,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	protected FinishTestItemRQ buildFinishTestItemRq(@Nonnull Maybe<String> itemId, @Nullable ItemStatus status) {
 		FinishTestItemRQ rq = new FinishTestItemRQ();
 		ofNullable(status).ifPresent(s -> rq.setStatus(s.name()));
-		rq.setEndTime(Calendar.getInstance().getTime());
+		rq.setEndTime(Instant.now());
 		if (Objects.equals(status, ItemStatus.FAILED) && errorDescriptionMap.containsKey(itemId)) {
 			String formattedException = String.format("Error:\n%s", errorDescriptionMap.get(itemId).getRight());
 			if (StringUtils.isNotBlank(errorDescriptionMap.get(itemId).getLeft())) {
@@ -492,7 +503,7 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	@Nonnull
 	private FinishExecutionRQ buildFinishExecutionRq() {
 		FinishExecutionRQ rq = new FinishExecutionRQ();
-		rq.setEndTime(Calendar.getInstance().getTime());
+		rq.setEndTime(Instant.now());
 		return rq;
 	}
 

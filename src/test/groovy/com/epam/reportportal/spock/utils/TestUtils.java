@@ -17,9 +17,11 @@
 package com.epam.reportportal.spock.utils;
 
 import com.epam.reportportal.listeners.ListenerParameters;
+import com.epam.reportportal.service.LaunchImpl;
 import com.epam.reportportal.service.ReportPortalClient;
 import com.epam.reportportal.util.test.CommonUtils;
 import com.epam.reportportal.utils.http.HttpRequestUtils;
+import com.epam.ta.reportportal.ws.model.ApiInfo;
 import com.epam.ta.reportportal.ws.model.BatchSaveOperatingRS;
 import com.epam.ta.reportportal.ws.model.Constants;
 import com.epam.ta.reportportal.ws.model.EntryCreatedAsyncRS;
@@ -42,8 +44,8 @@ import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
 import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.mockito.stubbing.Answer;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -98,6 +100,13 @@ public class TestUtils {
 			@Nullable final String launchUuid, @Nonnull final Collection<Pair<String, T>> testSteps) {
 		String launch = ofNullable(launchUuid).orElse(CommonUtils.namedId("launch_"));
 		when(client.startLaunch(any())).thenReturn(Maybe.just(new StartLaunchRS(launch, 1L)));
+		when(client.getApiInfo()).thenAnswer(invocation -> {
+			ApiInfo apiInfo = new ApiInfo();
+			ApiInfo.Build build = new ApiInfo.Build();
+			build.setVersion(LaunchImpl.MICROSECONDS_MIN_VERSION);
+			apiInfo.setBuild(build);
+			return Maybe.just(apiInfo);
+		});
 
 		List<Maybe<ItemCreatedRS>> testResponses = testSteps.stream()
 				.map(Pair::getKey)
