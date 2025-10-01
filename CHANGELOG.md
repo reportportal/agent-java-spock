@@ -7,6 +7,8 @@
 - Client version updated on [5.4.3](https://github.com/reportportal/client-java/releases/tag/5.4.3), by @HardNorth
 - Replace "jsr305" annotations with "jakarta.annotation-api", by @HardNorth
 - Switch on use of `Instant` class instead of `Date` to get more timestamp precision, by @HardNorth
+### Fixed
+- Issue [#53](https://github.com/reportportal/agent-java-spock/issues/53): NPE on specs with setup methods, by @HardNorth
 ### Removed
 - Java 8-10 support, by @HardNorth
 
