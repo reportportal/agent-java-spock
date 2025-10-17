@@ -39,7 +39,7 @@ repositories {
 }
 
 dependencies {
-    api "com.epam.reportportal:client-java:5.4.3"
+    api "com.epam.reportportal:client-java:5.4.4"
 
     compileOnly "org.spockframework:spock-core:${spock_version}"
     implementation 'org.slf4j:slf4j-api:2.0.7'
@@ -54,7 +54,7 @@ dependencies {
     testImplementation "org.mockito:mockito-core:${mockito_version}"
     testImplementation "org.mockito:mockito-inline:${mockito_version}"
     testImplementation "org.mockito:mockito-junit-jupiter:${mockito_version}"
-    testImplementation 'ch.qos.logback:logback-classic:1.5.18'
+    testImplementation 'ch.qos.logback:logback-classic:1.5.19'
     testImplementation 'com.epam.reportportal:logger-java-logback:5.4.0'
     testImplementation ("org.junit.platform:junit-platform-runner:${junit5_launcher_version}") {
         exclude module: 'junit'
