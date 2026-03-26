@@ -3,7 +3,6 @@ package com.epam.reportportal.spock;
 import jakarta.annotation.Nonnull;
 import org.spockframework.runtime.extension.IMethodInterceptor;
 import org.spockframework.runtime.extension.IMethodInvocation;
-import org.spockframework.runtime.model.ErrorInfo;
 
 /**
  * Implementation of {@link org.spockframework.runtime.extension.IMethodInterceptor}, which allows to report
@@ -33,7 +32,8 @@ class FixtureInterceptor implements IMethodInterceptor {
 					invocation.getSpec(),
 					invocation.getFeature(),
 					invocation.getIteration(),
-					new ErrorInfo(invocation.getMethod(), ex)
+					invocation.getMethod(),
+					ex
 			);
 		}
 		spockService.publishFixtureResult(invocation.getSpec(), invocation.getFeature(), invocation.getIteration(), invocation.getMethod());

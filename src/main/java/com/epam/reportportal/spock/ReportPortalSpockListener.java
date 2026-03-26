@@ -422,9 +422,8 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 	}
 
 	public void reportFixtureError(@Nonnull SpecInfo spec, @Nullable FeatureInfo feature, @Nullable IterationInfo iteration,
-			@Nonnull ErrorInfo error) {
-		MethodInfo method = error.getMethod();
-		NodeFootprint<?> ownerFootprint = findFixtureOwner(spec, feature, iteration, error.getMethod());
+			@Nonnull MethodInfo method, @Nonnull Throwable exception) {
+		NodeFootprint<?> ownerFootprint = findFixtureOwner(spec, feature, iteration, method);
 		MethodKind kind = method.getKind();
 		NodeFootprint<?> specFootprint = launchContext.findSpecFootprint(spec);
 		specFootprint.setStatus(FAILED);
@@ -450,9 +449,17 @@ public class ReportPortalSpockListener extends AbstractRunListener {
 		}
 		ReportableItemFootprint<MethodInfo> fixtureFootprint = ownerFootprint.findUnpublishedFixtureFootprint(method);
 		fixtureFootprint.setStatus(FAILED);
-		Throwable exception = error.getException();
-		LoggerFactory.getLogger(error.getMethod().getReflection().getDeclaringClass())
+		LoggerFactory.getLogger(method.getReflection().getDeclaringClass())
 				.error(exception.getLocalizedMessage(), StackTraceUtils.deepSanitize(exception));
+	}
+
+	/**
+	 * @deprecated use {@link #reportFixtureError(SpecInfo, FeatureInfo, IterationInfo, MethodInfo, Throwable)} instead
+	 */
+	@Deprecated(since = "5.4.6", forRemoval = true)
+	public void reportFixtureError(@Nonnull SpecInfo spec, @Nullable FeatureInfo feature, @Nullable IterationInfo iteration,
+			@Nonnull ErrorInfo error) {
+		reportFixtureError(spec, feature, iteration, error.getMethod(), error.getException());
 	}
 
 	protected void logError(@Nonnull ErrorInfo error) {
