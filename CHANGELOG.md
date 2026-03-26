@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [5.4.6]
 ### Fixed
 - `NoSuchMethodError` in some rare cases, by @HardNorth
 
